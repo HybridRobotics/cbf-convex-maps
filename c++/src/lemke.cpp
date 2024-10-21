@@ -25,8 +25,8 @@ inline void pivot_col(MatrixXd& tableau, int row, int col, int n) {
 inline int lexico_minimum_idx(const MatrixXd& tableau, int idx1, int idx2,
                               int entering_idx, int n) {
   for (int i = 0; i < n; ++i) {
-    double diff = tableau(idx2, i) * tableau(idx1, entering_idx) -
-                  tableau(idx1, i) * tableau(idx2, entering_idx);
+    const double diff = tableau(idx2, i) * tableau(idx1, entering_idx) -
+                        tableau(idx1, i) * tableau(idx2, entering_idx);
     if (diff < 0)
       return idx2;
     else if (diff > 0)
