@@ -1,5 +1,3 @@
-#include "sccbf/utils.h"
-
 #include <gtest/gtest.h>
 
 #include <Eigen/Core>
@@ -7,6 +5,8 @@
 #include <random>
 
 #include "sccbf/data_types.h"
+#include "sccbf/math_utils/numerical_derivatives.h"
+#include "sccbf/math_utils/utils.h"
 
 namespace {
 
@@ -35,9 +35,11 @@ bool ComponentwiseFinite(const VectorXd& vec) {
 }
 
 TEST(HatMap, TwoDimension) {
-  Vectord<1> vec{1};
-  Matrixd<2, 2> hat{MatrixXd::Zero(2, 2)};
-  Matrixd<2, 2> sol{};
+  VectorXd vec(1);
+  vec << 1;
+  MatrixXd hat(2, 2);
+  hat = MatrixXd::Zero(2, 2);
+  MatrixXd sol(2, 2);
   sol << 0, -1, 1, 0;
 
   hat_map<2>(vec, hat);
@@ -45,9 +47,11 @@ TEST(HatMap, TwoDimension) {
 }
 
 TEST(HatMap, ThreeDimension) {
-  Vectord<3> vec{1, 2, 3};
-  Matrixd<3, 3> hat{MatrixXd::Zero(3, 3)};
-  Matrixd<3, 3> sol{};
+  VectorXd vec(3);
+  vec << 1, 2, 3;
+  MatrixXd hat(3, 3);
+  hat = MatrixXd::Zero(3, 3);
+  MatrixXd sol(3, 3);
   sol << 0, -3, 2, 3, 0, -1, -2, 1, 0;
 
   hat_map<3>(vec, hat);

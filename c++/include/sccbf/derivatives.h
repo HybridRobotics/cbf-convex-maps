@@ -3,27 +3,27 @@
 
 #include <Eigen/Core>
 #include <cassert>
+#include <type_traits>
 
 #include "sccbf/data_types.h"
 
 namespace sccbf {
 
-template <int nz>
 struct Derivatives {
   VectorXd A;
   VectorXd A_x;
   MatrixXd A_z;
-  Vectord<nz> A_xz_y;
-  Matrixd<nz, nz> A_zz_y;
+  VectorXd A_xz_y;
+  MatrixXd A_zz_y;
 
-  Derivatives(int nr);
+  Derivatives(int nz, int nr);
 
   Derivatives(const VectorXd& A_, const VectorXd& A_x_, const MatrixXd& A_z_,
-              const Vectord<nz>& A_xz_y_, const Matrixd<nz, nz> A_zz_y);
+              const VectorXd& A_xz_y_, const MatrixXd& A_zz_y_);
 };
 
-template <int nz>
-Derivatives<nz>::Derivatives(int nr) : A(nr), A_x(nr), A_z(nz, nr) {
+inline Derivatives::Derivatives(int nz, int nr)
+    : A(nr), A_x(nr), A_z(nr, nz), A_xz_y(nz), A_zz_y(nz, nz) {
   A = VectorXd::Zero(nr);
   A_x = VectorXd::Zero(nr);
   A_z = MatrixXd::Zero(nr, nz);
@@ -31,15 +31,16 @@ Derivatives<nz>::Derivatives(int nr) : A(nr), A_x(nr), A_z(nz, nr) {
   A_zz_y = MatrixXd::Zero(nz, nz);
 }
 
-template <int nz>
-Derivatives<nz>::Derivatives(const VectorXd& A_, const VectorXd& A_x_,
-                             const MatrixXd& A_z_, const Vectord<nz>& A_xz_y_,
-                             const Matrixd<nz, nz> A_zz_y_)
+inline Derivatives::Derivatives(const VectorXd& A_, const VectorXd& A_x_,
+                                const MatrixXd& A_z_, const VectorXd& A_xz_y_,
+                                const MatrixXd& A_zz_y_)
     : A(A_), A_x(A_x_), A_z(A_z_), A_xz_y(A_xz_y_), A_zz_y(A_zz_y_) {
+  const int nz = static_cast<int>(A_z_.cols());
   const int nr = static_cast<int>(A_.rows());
   assert(A_x_.rows() == nr);
   assert(A_z_.rows() == nr);
-  assert(A_z_.cols() == nz);
+  assert(A_xz_y_.rows() == nz);
+  assert((A_zz_y_.rows() == nz) && (A_zz_y_.cols() == nz));
 }
 
 enum class DFlags : uint8_t {

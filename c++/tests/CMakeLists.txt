@@ -10,15 +10,15 @@ FetchContent_MakeAvailable(googletest)
 
 ## Add test executables
 add_executable(lemke_test lemke_unittest.cpp)
-add_executable(utils_test utils_unittest.cpp)
+add_executable(math_utils_test math_utils_unittest.cpp)
 
 
 ## Link libraries
 target_link_libraries(lemke_test PRIVATE sccbf GTest::gtest_main)
-target_link_libraries(utils_test PRIVATE sccbf GTest::gtest_main)
+target_link_libraries(math_utils_test PRIVATE sccbf GTest::gtest_main)
 
 
 include(GoogleTest)
 gtest_discover_tests(lemke_test)
-gtest_discover_tests(utils_test)
+gtest_discover_tests(math_utils_test)
 
