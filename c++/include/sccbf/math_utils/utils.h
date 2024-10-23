@@ -2,6 +2,7 @@
 #define SCCBF_UTILS_H_
 
 #include <Eigen/Core>
+#include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <cassert>
 #include <cmath>

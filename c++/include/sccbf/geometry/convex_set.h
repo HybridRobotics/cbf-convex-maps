@@ -10,7 +10,7 @@ class ConvexSet {
  protected:
   ConvexSet(int nz, int nr, double margin_)
       : derivatives(nz, nr), margin(margin_) {}
-  
+
   Derivatives derivatives;
   double margin;
 

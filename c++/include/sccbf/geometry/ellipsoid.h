@@ -2,7 +2,6 @@
 #define SCCBF GEOMETRY_ELLIPSOID_H_
 
 #include <Eigen/Core>
-#include <Eigen/Dense>
 #include <cassert>
 #include <stdexcept>
 
@@ -53,7 +52,7 @@ class Ellipsoid : public ConvexSet {
   static const MatrixXd hess_sparsity;
   static constexpr bool strongly_convex = true;
 
-  MatrixXd Q;
+  const MatrixXd Q;
 };
 
 template <int nz_>
@@ -64,13 +63,14 @@ const MatrixXd Ellipsoid<nz_>::hess_sparsity = MatrixXd::Ones(nz_, nz_);
 
 template <int nz_>
 Ellipsoid<nz_>::Ellipsoid(const MatrixXd& Q_, double margin_)
-    : ConvexSet(nz_, Ellipsoid<nz_>::nr_, margin_), Q(Q_) {
+    : ConvexSet(nz_, nr_, margin_), Q(Q_) {
+  static_assert((nz_ == 2) || (nz_ == 3));
   assert((Q_.rows() == nz_) && (Q_.cols() == nz_));
   if (!Q_.isApprox(Q_.transpose())) {
     throw std::runtime_error("Q is not symmetric!");
   }
   if (!is_positive_definite(Q_)) {
-    throw std::runtime_error("Q is not positive definitie!");
+    throw std::runtime_error("Q is not positive definite!");
   }
   assert(margin_ >= 0);
 }
@@ -84,10 +84,10 @@ const Derivatives& Ellipsoid<nz_>::update_derivatives(const VectorXd& x,
                                                       const VectorXd& z,
                                                       const VectorXd& y,
                                                       DFlags f) {
-  assert(x.rows() == Ellipsoid<nz_>::nx_);
-  assert(dx.rows() == Ellipsoid<nz_>::ndx_);
+  assert(x.rows() == nx_);
+  assert(dx.rows() == ndx_);
   assert(z.rows() == nz_);
-  assert(y.rows() == Ellipsoid<nz_>::nr_);
+  assert(y.rows() == nr_);
 
   const auto p = x.head<nz_>();
   const auto R = x.tail<nz_ * nz_>().reshaped(nz_, nz_);
@@ -125,16 +125,17 @@ template <int nz_>
 void Ellipsoid<nz_>::lie_derivatives_x(const VectorXd& x, const VectorXd& z,
                                        const VectorXd& y, const MatrixXd& fg,
                                        MatrixXd& L_fgA_y) const {
-  assert(x.rows() == Ellipsoid<nz_>::nx_);
+  assert(x.rows() == nx_);
   assert(z.rows() == nz_);
-  assert(y.rows() == Ellipsoid<nz_>::nr_);
-  assert(fg.rows() == Ellipsoid<nz_>::ndx_);
+  assert(y.rows() == nr_);
+  assert(fg.rows() == ndx_);
   assert(L_fgA_y.rows() == 1);
   assert(L_fgA_y.cols() == fg.cols());
 
   const auto p = x.head<nz_>();
   const auto R = x.tail<nz_ * nz_>().reshaped(nz_, nz_);
   const auto RQRt = R * Q * R.transpose();
+
   if constexpr (nz_ == 2) {
     VectorXd pz_perp(2);
     pz_perp << -(z - p)(1), (z - p)(0);
@@ -142,7 +143,7 @@ void Ellipsoid<nz_>::lie_derivatives_x(const VectorXd& x, const VectorXd& z,
               (fg.topRows<2>() + pz_perp * fg.bottomRows<1>());
   }
   if constexpr (nz_ == 3) {
-    MatrixXd pz_hat = Eigen::MatrixXd(3, 3);
+    MatrixXd pz_hat = MatrixXd::Zero(3, 3);
     hat_map<3>(z - p, pz_hat);
     L_fgA_y = -2 * y(0) * (z - p).tranpose() * RQRt *
               (fg.topRows<3>() - pz_hat * R * fg.bottomRows<3>());
@@ -161,17 +162,17 @@ inline int Ellipsoid<nz_>::nz() const {
 
 template <int nz_>
 inline int Ellipsoid<nz_>::nr() const {
-  return Ellipsoid<nz_>::nr_;
+  return nr_;
 }
 
 template <int nz_>
 inline int Ellipsoid<nz_>::nx() const {
-  return Ellipsoid<nz_>::nx_;
+  return nx_;
 }
 
 template <int nz_>
 inline int Ellipsoid<nz_>::ndx() const {
-  return Ellipsoid<nz_>::ndx_;
+  return ndx_;
 }
 
 template <int nz_>
