@@ -34,30 +34,6 @@ bool ComponentwiseFinite(const VectorXd& vec) {
   return finite;
 }
 
-TEST(HatMap, TwoDimension) {
-  VectorXd vec(1);
-  vec << 1;
-  MatrixXd hat(2, 2);
-  hat = MatrixXd::Zero(2, 2);
-  MatrixXd sol(2, 2);
-  sol << 0, -1, 1, 0;
-
-  hat_map<2>(vec, hat);
-  MatrixDoubleEQ(hat, sol);
-}
-
-TEST(HatMap, ThreeDimension) {
-  VectorXd vec(3);
-  vec << 1, 2, 3;
-  MatrixXd hat(3, 3);
-  hat = MatrixXd::Zero(3, 3);
-  MatrixXd sol(3, 3);
-  sol << 0, -3, 2, 3, 0, -1, -2, 1, 0;
-
-  hat_map<3>(vec, hat);
-  MatrixDoubleEQ(hat, sol);
-}
-
 // LogSumExp tests are taken from the reference.
 TEST(LogSumExp, ZeroVector) {
   const int n = 100;
@@ -99,7 +75,7 @@ TEST(LogSumExp, Underflow) {
 
 TEST(LogSumExp, SmallRandomVector) {
   // Set random generator.
-  std::mt19937 gen(5);
+  std::mt19937 gen(2);
   std::uniform_real_distribution<double> dis(-1, 1);
 
   const int n = 100;
@@ -117,7 +93,7 @@ TEST(LogSumExp, SmallRandomVector) {
 
 TEST(LogSumExp, LargeRandomVector) {
   // Set random generator.
-  std::mt19937 gen(5);
+  std::mt19937 gen(3);
   std::normal_distribution<double> dis(0, 100);
 
   const int n = 100;
@@ -128,6 +104,85 @@ TEST(LogSumExp, LargeRandomVector) {
 
   EXPECT_TRUE(ComponentwiseNonNegative(softmax));
   EXPECT_DOUBLE_EQ(softmax.sum(), 1);
+}
+
+TEST(MatrixTest, HatMap) {
+  {
+    VectorXd vec(1);
+    vec << 1;
+    MatrixXd hat(2, 2);
+    hat = MatrixXd::Zero(2, 2);
+    MatrixXd sol(2, 2);
+    sol << 0, -1, 1, 0;
+
+    hat_map<2>(vec, hat);
+    MatrixDoubleEQ(hat, sol);
+  }
+
+  {
+    VectorXd vec(3);
+    vec << 1, 2, 3;
+    MatrixXd hat(3, 3);
+    hat = MatrixXd::Zero(3, 3);
+    MatrixXd sol(3, 3);
+    sol << 0, -3, 2, 3, 0, -1, -2, 1, 0;
+
+    hat_map<3>(vec, hat);
+    MatrixDoubleEQ(hat, sol);
+  }
+}
+
+TEST(MatrixTest, EulerToRot) {
+  // Set random generator.
+  std::mt19937 gen(1);
+  const double pi = static_cast<double>(EIGEN_PI);
+  std::uniform_real_distribution<double> dis(-pi, pi);
+
+  const double ang_x = dis(gen);
+  const double ang_y = dis(gen) / 2.0;
+  const double ang_z = dis(gen);
+  MatrixXd rot(3, 3);
+
+  euler_to_rot(ang_x, ang_y, ang_z, rot);
+
+  EXPECT_TRUE(rot.isUnitary());
+  EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+}
+
+TEST(MatrixTest, RandomRotation) {
+  {
+    MatrixXd rot = random_rotation<2>();
+
+    EXPECT_TRUE(rot.isUnitary());
+    EXPECT_DOUBLE_EQ(rot.determinant(), 1);
+  }
+
+  {
+    MatrixXd rot = random_rotation<3>();
+
+    EXPECT_TRUE(rot.isUnitary());
+    EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+  }
+}
+
+TEST(MatrixTest, IsPositiveDefinite) {
+  {
+    MatrixXd R = random_rotation<3>();
+    VectorXd eig(3);
+    eig << -1, 0, 1;
+    MatrixXd mat = R * eig.asDiagonal() * R.transpose();
+
+    EXPECT_FALSE(is_positive_definite(mat));
+  }
+
+  {
+    MatrixXd R = random_rotation<3>();
+    VectorXd eig(3);
+    eig << 0.01, 0.01, 1;
+    MatrixXd mat = R * eig.asDiagonal() * R.transpose();
+
+    EXPECT_TRUE(is_positive_definite(mat));
+  }
 }
 
 TEST(NumericalGradient, ScalarExponential) {

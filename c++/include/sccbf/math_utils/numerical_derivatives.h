@@ -13,13 +13,13 @@ void numerical_gradient(const std::function<double(const VectorXd&)>& func,
                         const VectorXd& x, VectorXd& grad);
 
 Derivatives numerical_derivatives(ConvexSet& set, const VectorXd& x,
-                                  const VectorXd& dx, const VectorXd& z,
-                                  const VectorXd& y);
+                                  const VectorXd& x_dot, const VectorXd& dx,
+                                  const VectorXd& z, const VectorXd& y);
 
-void numerical_lie_derivatives_x(const ConvexSet& set, const VectorXd& x,
+void numerical_lie_derivatives_x(ConvexSet& set, const VectorXd& x,
                                  const VectorXd& z, const VectorXd& y,
-                                 const VectorXd& fx, const MatrixXd& gx,
-                                 double& L_fA_y, MatrixXd& L_gA_y);
+                                 const MatrixXd& fg_dot, const MatrixXd& fg,
+                                 MatrixXd& L_fgA_y);
 
 }  // namespace sccbf
 

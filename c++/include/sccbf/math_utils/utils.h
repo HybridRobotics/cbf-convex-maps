@@ -2,8 +2,11 @@
 #define SCCBF_UTILS_H_
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <cassert>
 #include <cmath>
+#include <random>
+#include <string>
 
 #include "sccbf/data_types.h"
 
@@ -48,6 +51,42 @@ inline double log_sum_exp(const Eigen::MatrixBase<Derived>& vec,
   softmax(max_idx) = 1;
   softmax = softmax / (1 + sum);
   return lse;
+}
+
+inline void euler_to_rot(double ang_x, double ang_y, double ang_z,
+                         MatrixXd& rot) {
+  assert((rot.rows() == 3) && (rot.cols() == 3));
+  const Eigen::AngleAxisd roll(ang_x, Eigen::Vector3d::UnitX());
+  const Eigen::AngleAxisd pitch(ang_y, Eigen::Vector3d::UnitY());
+  const Eigen::AngleAxisd yaw(ang_z, Eigen::Vector3d::UnitZ());
+  rot = (yaw * pitch * roll).matrix();
+}
+
+template <int dim>
+inline MatrixXd random_rotation() {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  const double pi = static_cast<double>(EIGEN_PI);
+  std::uniform_real_distribution<double> dis(-pi, pi);
+  MatrixXd rot(dim, dim);
+  if constexpr (dim == 2) {
+    const double ang = dis(gen);
+    rot << std::cos(ang), -std::sin(ang), std::sin(ang), std::cos(ang);
+  }
+  if constexpr (dim == 3) {
+    const double ang_x = dis(gen);
+    const double ang_y = dis(gen) / 2.0;
+    const double ang_z = dis(gen);
+    euler_to_rot(ang_x, ang_y, ang_z, rot);
+  }
+  return rot;
+}
+
+template <typename Derived>
+inline bool is_positive_definite(const Eigen::MatrixBase<Derived>& mat) {
+  assert(mat.rows() == mat.cols());
+  const Eigen::LDLT<MatrixXd> ldlt(mat);
+  return (ldlt.info() != Eigen::NumericalIssue) && ldlt.isPositive();
 }
 
 }  // namespace sccbf
