@@ -1,5 +1,5 @@
 #ifndef SCCBF_GEOMETRY_STATIC_ELLIPSOID_H_
-#define SCCBF GEOMETRY_STATIC_ELLIPSOID_H_
+#define SCCBF_GEOMETRY_STATIC_ELLIPSOID_H_
 
 #include <Eigen/Core>
 #include <cassert>

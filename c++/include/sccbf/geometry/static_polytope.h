@@ -1,5 +1,5 @@
 #ifndef SCCBF_GEOMETRY_STATIC_POLYTOPE_H_
-#define SCCBF GEOMETRY_STATIC_POLYTOPE_H_
+#define SCCBF_GEOMETRY_STATIC_POLYTOPE_H_
 
 #include <Eigen/Core>
 #include <cassert>
@@ -91,7 +91,7 @@ StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A_, const VectorXd& b_, cons
   }
 
   strongly_convex = (sc_modulus >= 1e-3);
-  hess_sparsity = sc_modulus * MatrixXd::Identity(nz_, nz_);
+  hess_sparsity = strongly_convex? MatrixXd::Identity(nz_, nz_): MatrixXd::Zero(nz_, nz_);
 }
 
 template <int nz_>

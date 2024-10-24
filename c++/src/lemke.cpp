@@ -13,6 +13,9 @@ namespace sccbf {
 
 namespace {
 
+constexpr int MAX_LCP_ITER = 100;
+constexpr double RATIO_TOL = 1e-6;
+
 inline void pivot_col(MatrixXd& tableau, int row, int col, int n) {
   tableau.row(row) /= tableau(row, col);
   for (int i = 0; i < n; ++i) {
@@ -38,9 +41,6 @@ inline int lexico_minimum_idx(const MatrixXd& tableau, int idx1, int idx2,
 }  // namespace
 
 LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
-  constexpr int MAX_LCP_ITER = 100;
-  constexpr double RATIO_TOL = 1e-6;
-
   const int n = static_cast<int>(M.rows());
   assert(M.cols() == n);
   assert(q.rows() == n);

@@ -1,5 +1,5 @@
 #ifndef SCCBF_GEOMETRY_POLYTOPE_H_
-#define SCCBF GEOMETRY_POLYTOPE_H_
+#define SCCBF_GEOMETRY_POLYTOPE_H_
 
 #include <Eigen/Core>
 #include <cassert>
@@ -92,7 +92,7 @@ Polytope<nz_>::Polytope(const MatrixXd& A_, const VectorXd& b_, double margin_,
   }
 
   strongly_convex = (sc_modulus >= 1e-3);
-  hess_sparsity = sc_modulus * MatrixXd::Identity(nz_, nz_);
+  hess_sparsity = strongly_convex? MatrixXd::Identity(nz_, nz_): MatrixXd::Zeros(nz_, nz_);
 }
 
 template <int nz_>
