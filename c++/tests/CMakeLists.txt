@@ -9,8 +9,11 @@ FetchContent_MakeAvailable(googletest)
 
 
 ## Add test executables
-add_executable(lemke_test lemke_unittest.cpp)
-add_executable(math_utils_test math_utils_unittest.cpp)
+add_executable(lemke_test "${PROJECT_SOURCE_DIR}/tests/lemke_unittest.cpp")
+add_executable(math_utils_test
+  "${PROJECT_SOURCE_DIR}/tests/math_utils/logsumexp_test.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/math_utils/matrixfunctions_test.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/math_utils/numericalgradient_test.cpp")
 
 
 ## Link libraries
