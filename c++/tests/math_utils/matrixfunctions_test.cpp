@@ -77,7 +77,7 @@ TEST(MatrixFunctions, RandomRotation2D) {
 
 TEST(MatrixFunctions, RandomRotation3D) {
   const int num_trials = 10;
-  for (int i = 0; i <  num_trials; ++i) {
+  for (int i = 0; i < num_trials; ++i) {
     MatrixXd rot = random_rotation<3>();
 
     EXPECT_TRUE(rot.isUnitary());

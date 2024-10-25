@@ -46,8 +46,37 @@ class ConvexSet {
 
   virtual bool is_strongly_convex() const = 0;
 
-  inline double safety_margin() const { return margin; };
+  double safety_margin() const;
+
+  void check_dimensions() const;
+
+  const Derivatives& get_derivatives() const;
 };
+
+inline double ConvexSet::safety_margin() const { return margin; }
+
+inline void ConvexSet::check_dimensions() const {
+  assert(dim() >= 0);
+  // ConvexSet instance must be solid (i.e. have a nonempty interior).
+  assert(dim() <= nz());
+  assert(nr() >= 0);
+  assert(nx() >= 0);
+  assert(ndx() >= 0);
+
+  const auto mat = projection_matrix();
+  assert(mat.rows() == dim());
+  assert(mat.cols() == nz());
+
+  const auto hess = hessian_sparsity_pattern();
+  assert(hess.rows() == nz());
+  assert(hess.cols() == nz());
+
+  assert(margin >= 0);
+}
+
+inline const Derivatives& ConvexSet::get_derivatives() const {
+  return derivatives;
+}
 
 }  // namespace sccbf
 

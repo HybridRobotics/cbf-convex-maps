@@ -71,7 +71,8 @@ StaticEllipsoid<nz_>::StaticEllipsoid(const MatrixXd& Q_, const VectorXd& p_,
   if (!is_positive_definite(Q_)) {
     throw std::runtime_error("Q is not positive definite!");
   }
-  assert(margin_ >= 0);
+
+  check_dimensions();
 }
 
 template <int nz_>

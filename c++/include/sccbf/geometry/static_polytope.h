@@ -15,8 +15,8 @@ namespace sccbf {
 template <int nz_>
 class StaticPolytope : public ConvexSet {
  public:
-  StaticPolytope(const MatrixXd& A_, const VectorXd& b_, const VectorXd& p_, double margin_,
-           double sc_modulus, bool normalize);
+  StaticPolytope(const MatrixXd& A_, const VectorXd& b_, const VectorXd& p_,
+                 double margin_, double sc_modulus, bool normalize);
 
   ~StaticPolytope();
 
@@ -63,8 +63,9 @@ template <int nz_>
 const MatrixXd StaticPolytope<nz_>::proj_mat = MatrixXd::Identity(nz_, nz_);
 
 template <int nz_>
-StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A_, const VectorXd& b_, const VectorXd& p_, double margin_,
-                        double sc_modulus_, bool normalize)
+StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A_, const VectorXd& b_,
+                                    const VectorXd& p_, double margin_,
+                                    double sc_modulus_, bool normalize)
     : ConvexSet(nz_, A_.rows(), margin_),
       A(A_),
       b(b_),
@@ -75,7 +76,6 @@ StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A_, const VectorXd& b_, cons
   assert(A_.rows() == b_.rows());
   assert(A_.cols() == nz_);
   assert(A_.rows() >= 1);
-  assert(margin_ >= 0);
   assert(sc_modulus_ >= 0);
 
   for (int i = 0; i < A_.rows(); ++i) {
@@ -91,7 +91,10 @@ StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A_, const VectorXd& b_, cons
   }
 
   strongly_convex = (sc_modulus >= 1e-3);
-  hess_sparsity = strongly_convex? MatrixXd::Identity(nz_, nz_): MatrixXd::Zero(nz_, nz_);
+  hess_sparsity =
+      strongly_convex ? MatrixXd::Identity(nz_, nz_) : MatrixXd::Zero(nz_, nz_);
+
+  check_dimensions();
 }
 
 template <int nz_>
@@ -99,10 +102,10 @@ StaticPolytope<nz_>::~StaticPolytope() {}
 
 template <int nz_>
 const Derivatives& StaticPolytope<nz_>::update_derivatives(const VectorXd& x,
-                                                     const VectorXd& dx,
-                                                     const VectorXd& z,
-                                                     const VectorXd& y,
-                                                     DFlags f) {
+                                                           const VectorXd& dx,
+                                                           const VectorXd& z,
+                                                           const VectorXd& y,
+                                                           DFlags f) {
   assert(x.rows() == nx_);
   assert(dx.rows() == ndx_);
   assert(z.rows() == nz_);
@@ -124,9 +127,11 @@ const Derivatives& StaticPolytope<nz_>::update_derivatives(const VectorXd& x,
 }
 
 template <int nz_>
-void StaticPolytope<nz_>::lie_derivatives_x(const VectorXd& x, const VectorXd& z,
-                                      const VectorXd& y, const MatrixXd& fg,
-                                      MatrixXd& L_fgA_y) const {
+void StaticPolytope<nz_>::lie_derivatives_x(const VectorXd& x,
+                                            const VectorXd& z,
+                                            const VectorXd& y,
+                                            const MatrixXd& fg,
+                                            MatrixXd& L_fgA_y) const {
   assert(x.rows() == nx_);
   assert(z.rows() == nz_);
   assert(y.rows() == nr_);

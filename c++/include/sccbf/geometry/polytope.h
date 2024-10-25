@@ -73,7 +73,6 @@ Polytope<nz_>::Polytope(const MatrixXd& A_, const VectorXd& b_, double margin_,
   static_assert((nz_ == 2) || (nz_ == 3));
   assert(A_.rows() == b_.rows());
   assert(A_.cols() == nz_);
-  assert(margin_ >= 0);
   assert(sc_modulus_ >= 0);
 
   if (A_.rows() <= nz_) {
@@ -92,7 +91,10 @@ Polytope<nz_>::Polytope(const MatrixXd& A_, const VectorXd& b_, double margin_,
   }
 
   strongly_convex = (sc_modulus >= 1e-3);
-  hess_sparsity = strongly_convex? MatrixXd::Identity(nz_, nz_): MatrixXd::Zeros(nz_, nz_);
+  hess_sparsity = strongly_convex ? MatrixXd::Identity(nz_, nz_)
+                                  : MatrixXd::Zeros(nz_, nz_);
+
+  check_dimensions();
 }
 
 template <int nz_>
