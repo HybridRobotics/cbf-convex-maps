@@ -6,9 +6,10 @@
 #include <memory>
 
 #include "sccbf/data_types.h"
-#include "sccbf/geometry/convex_set.h"
 
 namespace sccbf {
+
+class ConvexSet;
 
 class DistanceProblem : public Ipopt::TNLP {
  public:

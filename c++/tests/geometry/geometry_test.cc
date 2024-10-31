@@ -175,7 +175,7 @@ testing::AssertionResult AssertDerivativeEQ(
 }
 
 // Geometry tests
-DerivativeFlags kFlag = DerivativeFlags::f | DerivativeFlags::f_x |
+const DerivativeFlags kFlag = DerivativeFlags::f | DerivativeFlags::f_x |
                         DerivativeFlags::f_z | DerivativeFlags::f_xz_y |
                         DerivativeFlags::f_zz_y;
 const double kDerivativeErrorTol = 1e-3;

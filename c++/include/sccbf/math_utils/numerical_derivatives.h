@@ -4,10 +4,12 @@
 #include <functional>
 
 #include "sccbf/data_types.h"
-#include "sccbf/derivatives.h"
-#include "sccbf/geometry/convex_set.h"
 
 namespace sccbf {
+
+struct Derivatives;
+
+class ConvexSet;
 
 void NumericalGradient(const std::function<double(const VectorXd&)>& func,
                        const VectorXd& x, VectorXd& grad);
