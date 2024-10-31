@@ -9,19 +9,24 @@ FetchContent_MakeAvailable(googletest)
 
 
 ## Add test executables
-add_executable(lemke_test "${PROJECT_SOURCE_DIR}/tests/lemke_unittest.cpp")
-add_executable(math_utils_test
-  "${PROJECT_SOURCE_DIR}/tests/math_utils/logsumexp_test.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/math_utils/matrixfunctions_test.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/math_utils/numericalgradient_test.cpp")
+set(LIB_TEST_SOURCES
+  "${PROJECT_SOURCE_DIR}/tests/lemke_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/math_utils/logsumexp_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/math_utils/matrixfunctions_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/math_utils/numericalgradient_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/geometry/geometry_test.cc"
+)
 
+add_executable(${LIB_CORE}-tests
+  ${LIB_TEST_SOURCES}
+)
 
-## Link libraries
-target_link_libraries(lemke_test PRIVATE sccbf GTest::gtest_main)
-target_link_libraries(math_utils_test PRIVATE sccbf GTest::gtest_main)
+target_link_libraries(${LIB_CORE}-tests
+  PRIVATE
+    ${LIB_CORE}
+    GTest::gtest_main
+)
 
 
 include(GoogleTest)
-gtest_discover_tests(lemke_test)
-gtest_discover_tests(math_utils_test)
-
+gtest_discover_tests(${LIB_CORE}-tests)

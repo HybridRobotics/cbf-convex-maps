@@ -15,17 +15,16 @@ namespace sccbf {
 template <int nz_>
 class StaticEllipsoid : public ConvexSet {
  public:
-  StaticEllipsoid(const MatrixXd& Q_, const VectorXd& p_, double margin_);
+  StaticEllipsoid(const MatrixXd& Q, const VectorXd& p, double margin);
 
   ~StaticEllipsoid();
 
-  const Derivatives& update_derivatives(const VectorXd& x, const VectorXd& dx,
-                                        const VectorXd& z, const VectorXd& y,
-                                        DFlags f) override;
+  const Derivatives& UpdateDerivatives(const VectorXd& x, const VectorXd& dx,
+                                       const VectorXd& z, const VectorXd& y,
+                                       DerivativeFlags flag) override;
 
-  void lie_derivatives_x(const VectorXd& x, const VectorXd& z,
-                         const VectorXd& y, const MatrixXd& fg,
-                         MatrixXd& L_fgA_y) const override;
+  void LieDerivatives(const VectorXd& x, const VectorXd& z, const VectorXd& y,
+                      const MatrixXd& fg, MatrixXd& L_fg_y) const override;
 
   int dim() const override;
 
@@ -37,122 +36,126 @@ class StaticEllipsoid : public ConvexSet {
 
   int ndx() const override;
 
-  const MatrixXd& projection_matrix() const override;
+  const MatrixXd& get_projection_matrix() const override;
 
-  const MatrixXd& hessian_sparsity_pattern() const override;
+  const MatrixXd& get_hessian_sparsity_matrix() const override;
 
   bool is_strongly_convex() const override;
 
  private:
-  static constexpr int nx_ = 0;
-  static constexpr int ndx_ = 0;
-  static constexpr int nr_ = 1;
+  static constexpr int kNz = nz_;
+  static constexpr int kNDim = kNz;
+  static constexpr int kNx = 0;
+  static constexpr int kNdx = 0;
+  static constexpr int kNr = 1;
 
-  static const MatrixXd proj_mat;
-  static constexpr bool strongly_convex = true;
+  static const MatrixXd kProjectionMatrix;
+  static constexpr bool kStronglyConvex = true;
 
-  const MatrixXd Q;
-  const VectorXd p;
+  const MatrixXd Q_;
+  const VectorXd p_;
 };
 
 template <int nz_>
-const MatrixXd StaticEllipsoid<nz_>::proj_mat = MatrixXd::Identity(nz_, nz_);
+const MatrixXd StaticEllipsoid<nz_>::kProjectionMatrix =
+    MatrixXd::Identity(kNz, kNz);
 
 template <int nz_>
-StaticEllipsoid<nz_>::StaticEllipsoid(const MatrixXd& Q_, const VectorXd& p_,
-                                      double margin_)
-    : ConvexSet(nz_, nr_, margin_), Q(Q_), p(p_) {
-  static_assert(nz_ >= 2);
-  assert((Q_.rows() == nz_) && (Q_.cols() == nz_));
-  assert(p_.rows() == nz_);
-  if (!Q_.isApprox(Q_.transpose())) {
+StaticEllipsoid<nz_>::StaticEllipsoid(const MatrixXd& Q, const VectorXd& p,
+                                      double margin)
+    : ConvexSet(kNz, kNr, margin), Q_(Q), p_(p) {
+  static_assert(kNz >= 2);
+  assert((Q.rows() == kNz) && (Q.cols() == kNz));
+  assert(p.rows() == kNz);
+  if (!Q.isApprox(Q.transpose())) {
     throw std::runtime_error("Q is not symmetric!");
   }
-  if (!is_positive_definite(Q_)) {
+  if (!IsPositiveDefinite(Q)) {
     throw std::runtime_error("Q is not positive definite!");
   }
 
-  check_dimensions();
+  CheckDimensions();
 }
 
 template <int nz_>
 StaticEllipsoid<nz_>::~StaticEllipsoid() {}
 
 template <int nz_>
-inline const Derivatives& StaticEllipsoid<nz_>::update_derivatives(
+inline const Derivatives& StaticEllipsoid<nz_>::UpdateDerivatives(
     const VectorXd& x, const VectorXd& dx, const VectorXd& z, const VectorXd& y,
-    DFlags f) {
-  assert(x.rows() == nx_);
-  assert(dx.rows() == ndx_);
-  assert(z.rows() == nz_);
-  assert(y.rows() == nr_);
+    DerivativeFlags flag) {
+  assert(x.rows() == kNx);
+  assert(dx.rows() == kNdx);
+  assert(z.rows() == kNz);
+  assert(y.rows() == kNr);
 
-  if (has_dflag(f, DFlags::A)) {
-    derivatives.A(0) = (z - p).transpose() * Q * (z - p) - 1;
+  if (has_flag(flag, DerivativeFlags::f)) {
+    derivatives_.f(0) = (z - p_).transpose() * Q_ * (z - p_) - 1;
   }
-  if (has_dflag(f, DFlags::A_z)) {
-    derivatives.A_z = 2 * (z - p).transpose() * Q;
+  if (has_flag(flag, DerivativeFlags::f_z)) {
+    derivatives_.f_z = 2 * (z - p_).transpose() * Q_;
   }
-  if (has_dflag(f, DFlags::A_zz_y)) {
-    derivatives.A_zz_y = 2 * y(0) * Q;
+  if (has_flag(flag, DerivativeFlags::f_zz_y)) {
+    derivatives_.f_zz_y = 2 * y(0) * Q_;
   }
-  return derivatives;
+  return derivatives_;
 }
 
 template <int nz_>
-inline void StaticEllipsoid<nz_>::lie_derivatives_x(const VectorXd& x,
-                                                    const VectorXd& z,
-                                                    const VectorXd& y,
-                                                    const MatrixXd& fg,
-                                                    MatrixXd& L_fgA_y) const {
-  assert(x.rows() == nx_);
-  assert(z.rows() == nz_);
-  assert(y.rows() == nr_);
-  assert(fg.rows() == ndx_);
-  assert(L_fgA_y.rows() == 1);
-  assert(L_fgA_y.cols() == fg.cols());
+inline void StaticEllipsoid<nz_>::LieDerivatives(const VectorXd& x,
+                                                 const VectorXd& z,
+                                                 const VectorXd& y,
+                                                 const MatrixXd& fg,
+                                                 MatrixXd& L_fg_y) const {
+  assert(x.rows() == kNx);
+  assert(z.rows() == kNz);
+  assert(y.rows() == kNr);
+  assert(fg.rows() == kNdx);
+  assert(L_fg_y.rows() == 1);
+  assert(L_fg_y.cols() == fg.cols());
 
-  L_fgA_y = MatrixXd::Zero(1, L_fgA_y.cols());
+  L_fg_y = MatrixXd::Zero(1, L_fg_y.cols());
 }
 
 template <int nz_>
 inline int StaticEllipsoid<nz_>::dim() const {
-  return nz_;
+  return kNDim;
 }
 
 template <int nz_>
 inline int StaticEllipsoid<nz_>::nz() const {
-  return nz_;
+  return kNz;
 }
 
 template <int nz_>
 inline int StaticEllipsoid<nz_>::nr() const {
-  return nr_;
+  return kNr;
 }
 
 template <int nz_>
 inline int StaticEllipsoid<nz_>::nx() const {
-  return nx_;
+  return kNx;
 }
 
 template <int nz_>
 inline int StaticEllipsoid<nz_>::ndx() const {
-  return ndx_;
+  return kNdx;
 }
 
 template <int nz_>
-inline const MatrixXd& StaticEllipsoid<nz_>::projection_matrix() const {
-  return proj_mat;
+inline const MatrixXd& StaticEllipsoid<nz_>::get_projection_matrix() const {
+  return kProjectionMatrix;
 }
 
 template <int nz_>
-inline const MatrixXd& StaticEllipsoid<nz_>::hessian_sparsity_pattern() const {
-  return Q;
+inline const MatrixXd& StaticEllipsoid<nz_>::get_hessian_sparsity_matrix()
+    const {
+  return Q_;
 }
 
 template <int nz_>
 inline bool StaticEllipsoid<nz_>::is_strongly_convex() const {
-  return strongly_convex;
+  return kStronglyConvex;
 }
 
 typedef StaticEllipsoid<2> StaticEllipsoid2d;

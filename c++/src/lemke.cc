@@ -13,10 +13,10 @@ namespace sccbf {
 
 namespace {
 
-constexpr int MAX_LCP_ITER = 100;
-constexpr double RATIO_TOL = 1e-6;
+constexpr int kMaxLcpIter = 100;
+constexpr double kRatioTol = 1e-6;
 
-inline void pivot_col(MatrixXd& tableau, int row, int col, int n) {
+inline void PivotColumn(MatrixXd& tableau, int row, int col, int n) {
   tableau.row(row) /= tableau(row, col);
   for (int i = 0; i < n; ++i) {
     if (i != row) {
@@ -25,7 +25,7 @@ inline void pivot_col(MatrixXd& tableau, int row, int col, int n) {
   }
 }
 
-inline int lexico_minimum_idx(const MatrixXd& tableau, int idx1, int idx2,
+inline int LexicoMinimumIndex(const MatrixXd& tableau, int idx1, int idx2,
                               int entering_idx, int n) {
   for (int i = 0; i < n; ++i) {
     const double diff = tableau(idx2, i) * tableau(idx1, entering_idx) -
@@ -40,7 +40,7 @@ inline int lexico_minimum_idx(const MatrixXd& tableau, int idx1, int idx2,
 
 }  // namespace
 
-LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
+LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
   const int n = static_cast<int>(M.rows());
   assert(M.cols() == n);
   assert(q.rows() == n);
@@ -51,7 +51,7 @@ LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
   tableau.block(0, n, n, n) = -M;
   tableau.col(2 * n) = -VectorXd::Ones(n);
   tableau.col(2 * n + 1) = q;
-  Eigen::VectorXi bv = Eigen::VectorXi::LinSpaced(n, 0, n - 1);
+  Eigen::VectorXi basic_vars = Eigen::VectorXi::LinSpaced(n, 0, n - 1);
 
   int entering_idx{2 * n}, exiting_idx{};
   const int q_idx = 2 * n + 1;
@@ -59,17 +59,17 @@ LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
 
   // Initialization.
   min_ratio = tableau.col(q_idx).minCoeff(&exiting_idx);
-  if (min_ratio > -RATIO_TOL) {
+  if (min_ratio > -kRatioTol) {
     z = Eigen::VectorXd::Zero(n);
-    return LCPStatus::OPTIMAL;
+    return LcpStatus::kOptimal;
   }
-  pivot_col(tableau, exiting_idx, entering_idx, n);
+  PivotColumn(tableau, exiting_idx, entering_idx, n);
   tableau.col(q_idx) = tableau.col(q_idx).cwiseMax(0.0);
   const int z0_idx{exiting_idx};
-  bv(exiting_idx) = entering_idx;
+  basic_vars(exiting_idx) = entering_idx;
   entering_idx = exiting_idx + n;
 
-  for (int iter = 0; iter < MAX_LCP_ITER; ++iter) {
+  for (int iter = 0; iter < kMaxLcpIter; ++iter) {
     // Find exiting index.
     min_ratio = std::numeric_limits<double>::infinity();
     exiting_idx = -1;
@@ -83,7 +83,7 @@ LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
       }
     }
     if (exiting_idx == -1) {
-      return LCPStatus::INFEASIBLE;
+      return LcpStatus::kInfeasible;
     }
 
 #ifdef SCCBF_ROBUST_LEMKE
@@ -91,13 +91,13 @@ LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
     for (int i = 0; i < n; ++i) {
       if ((i != exiting_idx) && (tableau(i, entering_idx) > 0)) {
         if (std::abs(tableau(i, q_idx) / tableau(i, entering_idx) - min_ratio) <
-            RATIO_TOL) {
+            kRatioTol) {
           if (i == z0_idx) {
             exiting_idx_ = z0_idx;
             break;
           }
           exiting_idx_ =
-              lexico_minimum_idx(tableau, exiting_idx_, i, entering_idx, n);
+              LexicoMinimumIndex(tableau, exiting_idx_, i, entering_idx, n);
         }
       }
     }
@@ -105,10 +105,10 @@ LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
 #endif  // SCCBF_ROBUST_LEMKE
 
     // Pivot and compute entering index.
-    pivot_col(tableau, exiting_idx, entering_idx, n);
+    PivotColumn(tableau, exiting_idx, entering_idx, n);
     tableau.col(q_idx) = tableau.col(q_idx).cwiseMax(0.0);
-    const int exiting_var = bv(exiting_idx);
-    bv(exiting_idx) = entering_idx;
+    const int exiting_var = basic_vars(exiting_idx);
+    basic_vars(exiting_idx) = entering_idx;
     if (exiting_var < n) {
       entering_idx = exiting_var + n;
     } else if (exiting_var < 2 * n) {
@@ -116,14 +116,14 @@ LCPStatus solve_LCP(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
     } else {
       z = VectorXd::Zero(n);
       for (int i = 0; i < n; ++i) {
-        if (bv(i) >= n) {
-          z(bv(i) - n) = tableau(i, q_idx);
+        if (basic_vars(i) >= n) {
+          z(basic_vars(i) - n) = tableau(i, q_idx);
         }
       }
-      return LCPStatus::OPTIMAL;
+      return LcpStatus::kOptimal;
     }
   }
-  return LCPStatus::MAX_ITER_REACHED;
+  return LcpStatus::kMaxIterReached;
 }
 
 }  // namespace sccbf

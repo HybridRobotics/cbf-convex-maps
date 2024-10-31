@@ -10,82 +10,82 @@
 namespace sccbf {
 
 struct Derivatives {
-  VectorXd A;
-  VectorXd A_x;
-  MatrixXd A_z;
-  VectorXd A_xz_y;
-  MatrixXd A_zz_y;
+  VectorXd f;
+  VectorXd f_x;
+  MatrixXd f_z;
+  VectorXd f_xz_y;
+  MatrixXd f_zz_y;
 
   Derivatives(int nz, int nr);
 
-  Derivatives(const VectorXd& A_, const VectorXd& A_x_, const MatrixXd& A_z_,
-              const VectorXd& A_xz_y_, const MatrixXd& A_zz_y_);
+  Derivatives(const VectorXd& f, const VectorXd& f_x, const MatrixXd& f_z,
+              const VectorXd& f_xz_y, const MatrixXd& f_zz_y);
 };
 
 inline Derivatives::Derivatives(int nz, int nr)
-    : A(nr), A_x(nr), A_z(nr, nz), A_xz_y(nz), A_zz_y(nz, nz) {
-  A = VectorXd::Zero(nr);
-  A_x = VectorXd::Zero(nr);
-  A_z = MatrixXd::Zero(nr, nz);
-  A_xz_y = VectorXd::Zero(nz);
-  A_zz_y = MatrixXd::Zero(nz, nz);
+    : f(nr), f_x(nr), f_z(nr, nz), f_xz_y(nz), f_zz_y(nz, nz) {
+  f = VectorXd::Zero(nr);
+  f_x = VectorXd::Zero(nr);
+  f_z = MatrixXd::Zero(nr, nz);
+  f_xz_y = VectorXd::Zero(nz);
+  f_zz_y = MatrixXd::Zero(nz, nz);
 }
 
-inline Derivatives::Derivatives(const VectorXd& A_, const VectorXd& A_x_,
-                                const MatrixXd& A_z_, const VectorXd& A_xz_y_,
-                                const MatrixXd& A_zz_y_)
-    : A(A_), A_x(A_x_), A_z(A_z_), A_xz_y(A_xz_y_), A_zz_y(A_zz_y_) {
-  const int nz = static_cast<int>(A_z_.cols());
-  const int nr = static_cast<int>(A_.rows());
-  assert(A_x_.rows() == nr);
-  assert(A_z_.rows() == nr);
-  assert(A_xz_y_.rows() == nz);
-  assert((A_zz_y_.rows() == nz) && (A_zz_y_.cols() == nz));
+inline Derivatives::Derivatives(const VectorXd& f, const VectorXd& f_x,
+                                const MatrixXd& f_z, const VectorXd& f_xz_y,
+                                const MatrixXd& f_zz_y)
+    : f(f), f_x(f_x), f_z(f_z), f_xz_y(f_xz_y), f_zz_y(f_zz_y) {
+  const int nz = static_cast<int>(f_z.cols());
+  const int nr = static_cast<int>(f.rows());
+  assert(f_x.rows() == nr);
+  assert(f_z.rows() == nr);
+  assert(f_xz_y.rows() == nz);
+  assert((f_zz_y.rows() == nz) && (f_zz_y.cols() == nz));
 }
 
-enum class DFlags : uint8_t {
-  A = 1 << 0,
-  A_x = 1 << 1,
-  A_z = 1 << 2,
-  A_xz_y = 1 << 3,
-  A_zz_y = 1 << 4,
+enum class DerivativeFlags : uint8_t {
+  f = 1 << 0,
+  f_x = 1 << 1,
+  f_z = 1 << 2,
+  f_xz_y = 1 << 3,
+  f_zz_y = 1 << 4,
 };
 
-inline DFlags operator|(DFlags a, DFlags b) {
-  return static_cast<DFlags>(
-      static_cast<std::underlying_type<DFlags>::type>(a) |
-      static_cast<std::underlying_type<DFlags>::type>(b));
+inline DerivativeFlags operator|(DerivativeFlags a, DerivativeFlags b) {
+  return static_cast<DerivativeFlags>(
+      static_cast<std::underlying_type<DerivativeFlags>::type>(a) |
+      static_cast<std::underlying_type<DerivativeFlags>::type>(b));
 }
 
-inline DFlags operator&(DFlags a, DFlags b) {
-  return static_cast<DFlags>(
-      static_cast<std::underlying_type<DFlags>::type>(a) &
-      static_cast<std::underlying_type<DFlags>::type>(b));
+inline DerivativeFlags operator&(DerivativeFlags a, DerivativeFlags b) {
+  return static_cast<DerivativeFlags>(
+      static_cast<std::underlying_type<DerivativeFlags>::type>(a) &
+      static_cast<std::underlying_type<DerivativeFlags>::type>(b));
 }
 
-inline DFlags operator^(DFlags a, DFlags b) {
-  return static_cast<DFlags>(
-      static_cast<std::underlying_type<DFlags>::type>(a) ^
-      static_cast<std::underlying_type<DFlags>::type>(b));
+inline DerivativeFlags operator^(DerivativeFlags a, DerivativeFlags b) {
+  return static_cast<DerivativeFlags>(
+      static_cast<std::underlying_type<DerivativeFlags>::type>(a) ^
+      static_cast<std::underlying_type<DerivativeFlags>::type>(b));
 }
 
-inline DFlags& operator|=(DFlags& a, DFlags b) {
+inline DerivativeFlags& operator|=(DerivativeFlags& a, DerivativeFlags b) {
   a = a | b;
   return a;
 }
 
-inline DFlags& operator&=(DFlags& a, DFlags b) {
+inline DerivativeFlags& operator&=(DerivativeFlags& a, DerivativeFlags b) {
   a = a & b;
   return a;
 }
 
-inline DFlags& operator^=(DFlags& a, DFlags b) {
+inline DerivativeFlags& operator^=(DerivativeFlags& a, DerivativeFlags b) {
   a = a ^ b;
   return a;
 }
 
-inline bool has_dflag(DFlags f1, DFlags f2) {
-  return static_cast<std::underlying_type<DFlags>::type>(f1 & f2);
+inline bool has_flag(DerivativeFlags flag, DerivativeFlags a) {
+  return static_cast<std::underlying_type<DerivativeFlags>::type>(flag & a);
 }
 
 }  // namespace sccbf

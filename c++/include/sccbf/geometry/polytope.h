@@ -13,21 +13,26 @@
 
 namespace sccbf {
 
+namespace {
+
+constexpr double kPolytopeScThreshold = 1e-3;
+
+}  // namespace
+
 template <int nz_>
 class Polytope : public ConvexSet {
  public:
-  Polytope(const MatrixXd& A_, const VectorXd& b_, double margin_,
+  Polytope(const MatrixXd& A, const VectorXd& b, double margin,
            double sc_modulus, bool normalize);
 
   ~Polytope();
 
-  const Derivatives& update_derivatives(const VectorXd& x, const VectorXd& dx,
-                                        const VectorXd& z, const VectorXd& y,
-                                        DFlags f) override;
+  const Derivatives& UpdateDerivatives(const VectorXd& x, const VectorXd& dx,
+                                       const VectorXd& z, const VectorXd& y,
+                                       DerivativeFlags flag) override;
 
-  void lie_derivatives_x(const VectorXd& x, const VectorXd& z,
-                         const VectorXd& y, const MatrixXd& fg,
-                         MatrixXd& L_fgA_y) const override;
+  void LieDerivatives(const VectorXd& x, const VectorXd& z, const VectorXd& y,
+                      const MatrixXd& fg, MatrixXd& L_fg_y) const override;
 
   int dim() const override;
 
@@ -39,147 +44,152 @@ class Polytope : public ConvexSet {
 
   int ndx() const override;
 
-  const MatrixXd& projection_matrix() const override;
+  const MatrixXd& get_projection_matrix() const override;
 
-  const MatrixXd& hessian_sparsity_pattern() const override;
+  const MatrixXd& get_hessian_sparsity_matrix() const override;
 
   bool is_strongly_convex() const override;
 
  private:
-  static constexpr int nx_ = nz_ + nz_ * nz_;
-  static constexpr int ndx_ = (nz_ == 2) ? 3 : 2 * nz_;
+  static constexpr int kNz = nz_;
+  static constexpr int kNDim = kNz;
+  static constexpr int kNx = kNz + kNz * kNz;
+  static constexpr int kNdx = (kNz == 2) ? 3 : 2 * kNz;
 
-  static const MatrixXd proj_mat;
+  static const MatrixXd kProjectionMatrix;
 
-  MatrixXd A;
-  VectorXd b;
-  const double sc_modulus;
+  MatrixXd A_;
+  VectorXd b_;
+  const double sc_modulus_;
   const int nr_;
-  MatrixXd hess_sparsity;
-  bool strongly_convex;
+  MatrixXd hessian_sparsity_matrix_;
+  bool strongly_convex_;
 };
 
 template <int nz_>
-const MatrixXd Polytope<nz_>::proj_mat = MatrixXd::Identity(nz_, nz_);
+const MatrixXd Polytope<nz_>::kProjectionMatrix = MatrixXd::Identity(kNz, kNz);
 
 template <int nz_>
-Polytope<nz_>::Polytope(const MatrixXd& A_, const VectorXd& b_, double margin_,
-                        double sc_modulus_, bool normalize)
-    : ConvexSet(nz_, A_.rows(), margin_),
-      A(A_),
-      b(b_),
-      sc_modulus(sc_modulus_),
-      nr_(A_.rows()) {
-  static_assert((nz_ == 2) || (nz_ == 3));
-  assert(A_.rows() == b_.rows());
-  assert(A_.cols() == nz_);
-  assert(sc_modulus_ >= 0);
+Polytope<nz_>::Polytope(const MatrixXd& A, const VectorXd& b, double margin,
+                        double sc_modulus, bool normalize)
+    : ConvexSet(kNz, static_cast<int>(A.rows()), margin),
+      A_(A),
+      b_(b),
+      sc_modulus_(sc_modulus),
+      nr_(static_cast<int>(A.rows())) {
+  static_assert((kNz == 2) || (kNz == 3));
+  assert(A.rows() == b.rows());
+  assert(A.cols() == kNz);
+  assert(sc_modulus >= 0);
 
-  if (A_.rows() <= nz_) {
+  if (A.rows() <= kNz) {
     std::runtime_error("Polytope is not compact!");
   }
-  for (int i = 0; i < A_.rows(); ++i) {
-    const double normi = A.row(i).norm();
-    if (normi <= 1e-4) {
+  for (int i = 0; i < A.rows(); ++i) {
+    const double row_norm = A.row(i).norm();
+    if (row_norm <= 1e-4) {
       std::runtime_error("Row " + std::to_string(i) +
                          " of A is close to zero!");
     }
     if (normalize) {
-      A.row(i).normalize();
-      b(i) = b(i) / normi;
+      A_.row(i).normalize();
+      b_(i) = b_(i) / row_norm;
     }
   }
 
-  strongly_convex = (sc_modulus >= 1e-3);
-  hess_sparsity = strongly_convex ? MatrixXd::Identity(nz_, nz_)
-                                  : MatrixXd::Zeros(nz_, nz_);
+  strongly_convex_ = (sc_modulus >= kPolytopeScThreshold);
+  if (strongly_convex_)
+    hessian_sparsity_matrix_ = MatrixXd::Identity(kNz, kNz);
+  else
+    hessian_sparsity_matrix_ = MatrixXd::Zero(kNz, kNz);
 
-  check_dimensions();
+  CheckDimensions();
 }
 
 template <int nz_>
 Polytope<nz_>::~Polytope() {}
 
 template <int nz_>
-const Derivatives& Polytope<nz_>::update_derivatives(const VectorXd& x,
-                                                     const VectorXd& dx,
-                                                     const VectorXd& z,
-                                                     const VectorXd& y,
-                                                     DFlags f) {
-  assert(x.rows() == nx_);
-  assert(dx.rows() == ndx_);
-  assert(z.rows() == nz_);
+const Derivatives& Polytope<nz_>::UpdateDerivatives(const VectorXd& x,
+                                                    const VectorXd& dx,
+                                                    const VectorXd& z,
+                                                    const VectorXd& y,
+                                                    DerivativeFlags flag) {
+  assert(x.rows() == kNx);
+  assert(dx.rows() == kNdx);
+  assert(z.rows() == kNz);
   assert(y.rows() == nr_);
 
-  const auto p = x.head<nz_>();
-  const auto R = x.tail<nz_ * nz_>().reshaped(nz_, nz_);
-  const auto v = dx.head<nz_>();
-  MatrixXd wg_hat = MatrixXd::Zero(nz_, nz_);
-  if constexpr (nz_ == 2) {
-    hat_map<2>(dx.tail<1>(), wg_hat);
+  const auto p = x.head<kNz>();
+  const auto R = x.tail<kNz * kNz>().reshaped(kNz, kNz);
+  const auto v = dx.head<kNz>();
+  MatrixXd wg_hat = MatrixXd::Zero(kNz, kNz);
+  if constexpr (kNz == 2) {
+    HatMap<2>(dx.tail<1>(), wg_hat);
   }
-  if constexpr (nz_ == 3) {
-    hat_map<3>(R * dx.tail<3>(), wg_hat);
+  if constexpr (kNz == 3) {
+    HatMap<3>(R * dx.tail<3>(), wg_hat);
   }
-  const auto ARt = A * R.transpose();
+  const auto ARt = A_ * R.transpose();
 
-  if (has_dflag(f, DFlags::A)) {
-    derivatives.A = ARt * (z - p) - b +
-                    sc_modulus * (z - p).squaredNorm() * VectorXd::Ones(nr_);
+  if (has_flag(flag, DerivativeFlags::f)) {
+    derivatives_.f = ARt * (z - p) - b_ +
+                     sc_modulus_ * (z - p).squaredNorm() * VectorXd::Ones(nr_);
   }
-  if (has_dflag(f, DFlags::A_z) || has_dflag(f, DFlags::A_x)) {
-    derivatives.A_z =
-        ARt + 2 * sc_modulus * VectorXd::Ones(nr_) * (z - p).transpose();
-    derivatives.A_x = -ARt * wg_hat * (z - p) - derivatives.A_z * v;
+  if (has_flag(flag, DerivativeFlags::f_z) ||
+      has_flag(flag, DerivativeFlags::f_x)) {
+    derivatives_.f_z =
+        ARt + 2 * sc_modulus_ * VectorXd::Ones(nr_) * (z - p).transpose();
+    derivatives_.f_x = -ARt * wg_hat * (z - p) - derivatives_.f_z * v;
   }
-  if (has_dflag(f, DFlags::A_zz_y)) {
-    derivatives.A_zz_y =
-        2 * sc_modulus * y.sum() * MatrixXd::Identity(nz_, nz_);
+  if (has_flag(flag, DerivativeFlags::f_zz_y)) {
+    derivatives_.f_zz_y =
+        2 * sc_modulus_ * y.sum() * MatrixXd::Identity(kNz, kNz);
   }
-  if (has_dflag(f, DFlags::A_xz_y)) {
-    derivatives.A_xz_y =
-        -y.transpose() * ARt * wg_hat - 2 * sc_modulus * y.sum() * v;
+  if (has_flag(flag, DerivativeFlags::f_xz_y)) {
+    derivatives_.f_xz_y = -(y.transpose() * ARt * wg_hat).transpose() -
+                          2 * sc_modulus_ * y.sum() * v;
   }
-  return derivatives;
+  return derivatives_;
 }
 
 template <int nz_>
-void Polytope<nz_>::lie_derivatives_x(const VectorXd& x, const VectorXd& z,
-                                      const VectorXd& y, const MatrixXd& fg,
-                                      MatrixXd& L_fgA_y) const {
-  assert(x.rows() == nx_);
-  assert(z.rows() == nz_);
+void Polytope<nz_>::LieDerivatives(const VectorXd& x, const VectorXd& z,
+                                   const VectorXd& y, const MatrixXd& fg,
+                                   MatrixXd& L_fg_y) const {
+  assert(x.rows() == kNx);
+  assert(z.rows() == kNz);
   assert(y.rows() == nr_);
-  assert(fg.rows() == ndx_);
-  assert(L_fgA_y.rows() == 1);
-  assert(L_fgA_y.cols() == fg.cols());
+  assert(fg.rows() == kNdx);
+  assert(L_fg_y.rows() == 1);
+  assert(L_fg_y.cols() == fg.cols());
 
-  const auto p = x.head<nz_>();
-  const auto R = x.tail<nz_ * nz_>().reshaped(nz_, nz_);
-  const auto yARt = y.transpose() * A * R.transpose();
+  const auto p = x.head<kNz>();
+  const auto R = x.tail<kNz * kNz>().reshaped(kNz, kNz);
+  const auto yARt = y.transpose() * A_ * R.transpose();
 
-  if constexpr (nz_ == 2) {
+  if constexpr (kNz == 2) {
     VectorXd pz_perp(2);
     pz_perp << -(z - p)(1), (z - p)(0);
-    L_fgA_y = -yARt * (fg.topRows<2>() + pz_perp * fg.bottomRows<1>()) -
-              2 * sc_modulus * y.sum() * (z - p).transpose() * fg.topRows<2>();
+    L_fg_y = -yARt * (fg.topRows<2>() + pz_perp * fg.bottomRows<1>()) -
+             2 * sc_modulus_ * y.sum() * (z - p).transpose() * fg.topRows<2>();
   }
-  if constexpr (nz_ == 3) {
+  if constexpr (kNz == 3) {
     MatrixXd pz_hat = Eigen::MatrixXd(3, 3);
-    hat_map<3>(z - p, pz_hat);
-    L_fgA_y = -yARt * (fg.topRows<3>() - pz_hat * R * fg.bottomRows<3>()) -
-              2 * sc_modulus * y.sum() * (z - p).transpose() * fg.topRows<3>();
+    HatMap<3>(z - p, pz_hat);
+    L_fg_y = -yARt * (fg.topRows<3>() - pz_hat * R * fg.bottomRows<3>()) -
+             2 * sc_modulus_ * y.sum() * (z - p).transpose() * fg.topRows<3>();
   }
 }
 
 template <int nz_>
 inline int Polytope<nz_>::dim() const {
-  return nz_;
+  return kNDim;
 }
 
 template <int nz_>
 inline int Polytope<nz_>::nz() const {
-  return nz_;
+  return kNz;
 }
 
 template <int nz_>
@@ -189,27 +199,27 @@ inline int Polytope<nz_>::nr() const {
 
 template <int nz_>
 inline int Polytope<nz_>::nx() const {
-  return nx_;
+  return kNx;
 }
 
 template <int nz_>
 inline int Polytope<nz_>::ndx() const {
-  return ndx_;
+  return kNdx;
 }
 
 template <int nz_>
-inline const MatrixXd& Polytope<nz_>::projection_matrix() const {
-  return proj_mat;
+inline const MatrixXd& Polytope<nz_>::get_projection_matrix() const {
+  return kProjectionMatrix;
 }
 
 template <int nz_>
-inline const MatrixXd& Polytope<nz_>::hessian_sparsity_pattern() const {
-  return hess_sparsity;
+inline const MatrixXd& Polytope<nz_>::get_hessian_sparsity_matrix() const {
+  return hessian_sparsity_matrix_;
 }
 
 template <int nz_>
 inline bool Polytope<nz_>::is_strongly_convex() const {
-  return strongly_convex;
+  return strongly_convex_;
 }
 
 typedef Polytope<2> Polytope2d;

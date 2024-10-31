@@ -9,17 +9,17 @@
 
 namespace sccbf {
 
-void numerical_gradient(const std::function<double(const VectorXd&)>& func,
-                        const VectorXd& x, VectorXd& grad);
+void NumericalGradient(const std::function<double(const VectorXd&)>& func,
+                       const VectorXd& x, VectorXd& grad);
 
-Derivatives numerical_derivatives(ConvexSet& set, const VectorXd& x,
-                                  const VectorXd& x_dot, const VectorXd& dx,
-                                  const VectorXd& z, const VectorXd& y);
+Derivatives NumericalDerivatives(ConvexSet& set, const VectorXd& x,
+                                 const VectorXd& x_dot, const VectorXd& dx,
+                                 const VectorXd& z, const VectorXd& y);
 
-void numerical_lie_derivatives_x(ConvexSet& set, const VectorXd& x,
-                                 const VectorXd& z, const VectorXd& y,
-                                 const MatrixXd& fg_dot, const MatrixXd& fg,
-                                 MatrixXd& L_fgA_y);
+void NumericalLieDerivatives(ConvexSet& set, const VectorXd& x,
+                             const VectorXd& z, const VectorXd& y,
+                             const MatrixXd& fg_dot, const MatrixXd& fg,
+                             MatrixXd& L_fg_y);
 
 }  // namespace sccbf
 

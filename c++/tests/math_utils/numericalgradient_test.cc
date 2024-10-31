@@ -10,7 +10,7 @@ namespace {
 
 using namespace sccbf;
 
-TEST(NumericalGradient, ScalarExponential) {
+TEST(NumericalGradientTest, ScalarExponential) {
   const double k = 5;
   const auto func = [k](const VectorXd& x) { return std::exp(k * x(0)); };
   VectorXd x(6);
@@ -22,13 +22,13 @@ TEST(NumericalGradient, ScalarExponential) {
     VectorXd grad_(1);
     VectorXd xi(1);
     xi << x(i);
-    numerical_gradient(func, xi, grad_);
+    NumericalGradient(func, xi, grad_);
     EXPECT_NEAR(grad_(0), sol(i), 1e-4)
         << "Incorrect derivative at x = " << x(i);
   }
 }
 
-TEST(NumericalGradient, ScalarLogarithm) {
+TEST(NumericalGradientTest, ScalarLogarithm) {
   const double k = 5;
   const auto func = [k](const VectorXd& x) { return std::log(k * x(0)); };
   VectorXd x(6);
@@ -40,21 +40,21 @@ TEST(NumericalGradient, ScalarLogarithm) {
     VectorXd grad_(1);
     VectorXd xi(1);
     xi << x(i);
-    numerical_gradient(func, xi, grad_);
+    NumericalGradient(func, xi, grad_);
     EXPECT_NEAR(grad_(0), sol(i), 1e-4)
         << "Incorrect derivative at x = " << x(i);
   }
 }
 
-TEST(NumericalGradient, VectorSinusoid) {
+TEST(NumericalGradientTest, VectorSinusoid) {
   const double k1 = 5;
   const double k2 = 10;
-  const double pi = static_cast<double>(EIGEN_PI);
+  const double kPi = static_cast<double>(EIGEN_PI);
   const auto func = [k1, k2](const VectorXd& x) {
     return std::sin(k1 * x(0)) * std::cos(k2 * x(1));
   };
   VectorXd x1(5);
-  x1 << 0, pi / 6, pi / 4, pi / 3, pi / 2;
+  x1 << 0, kPi / 6, kPi / 4, kPi / 3, kPi / 2;
   VectorXd x2(x1.rows());
   x2 = x1;
 
@@ -63,7 +63,7 @@ TEST(NumericalGradient, VectorSinusoid) {
       VectorXd grad_(2);
       VectorXd xi(2);
       xi << x1(i), x2(j);
-      numerical_gradient(func, xi, grad_);
+      NumericalGradient(func, xi, grad_);
       VectorXd sol(2);
       sol(0) = k1 * std::cos(k1 * xi(0)) * std::cos(k2 * xi(1));
       sol(1) = -k2 * std::sin(k1 * xi(0)) * std::sin(k2 * xi(1));

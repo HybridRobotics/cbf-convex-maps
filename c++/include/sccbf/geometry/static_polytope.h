@@ -12,21 +12,26 @@
 
 namespace sccbf {
 
+namespace {
+
+constexpr double kStaticPolytopeScThreshold = 1e-3;
+
+}  // namespace
+
 template <int nz_>
 class StaticPolytope : public ConvexSet {
  public:
-  StaticPolytope(const MatrixXd& A_, const VectorXd& b_, const VectorXd& p_,
-                 double margin_, double sc_modulus, bool normalize);
+  StaticPolytope(const MatrixXd& A, const VectorXd& b, const VectorXd& p,
+                 double margin, double sc_modulus, bool normalize);
 
   ~StaticPolytope();
 
-  const Derivatives& update_derivatives(const VectorXd& x, const VectorXd& dx,
-                                        const VectorXd& z, const VectorXd& y,
-                                        DFlags f) override;
+  const Derivatives& UpdateDerivatives(const VectorXd& x, const VectorXd& dx,
+                                       const VectorXd& z, const VectorXd& y,
+                                       DerivativeFlags flag) override;
 
-  void lie_derivatives_x(const VectorXd& x, const VectorXd& z,
-                         const VectorXd& y, const MatrixXd& fg,
-                         MatrixXd& L_fgA_y) const override;
+  void LieDerivatives(const VectorXd& x, const VectorXd& z, const VectorXd& y,
+                      const MatrixXd& fg, MatrixXd& L_fg_y) const override;
 
   int dim() const override;
 
@@ -38,118 +43,119 @@ class StaticPolytope : public ConvexSet {
 
   int ndx() const override;
 
-  const MatrixXd& projection_matrix() const override;
+  const MatrixXd& get_projection_matrix() const override;
 
-  const MatrixXd& hessian_sparsity_pattern() const override;
+  const MatrixXd& get_hessian_sparsity_matrix() const override;
 
   bool is_strongly_convex() const override;
 
  private:
-  static constexpr int nx_ = 0;
-  static constexpr int ndx_ = 0;
+  static constexpr int kNz = nz_;
+  static constexpr int kNDim = kNz;
+  static constexpr int kNx = 0;
+  static constexpr int kNdx = 0;
 
-  static const MatrixXd proj_mat;
+  static const MatrixXd kProjectionMatrix;
 
-  MatrixXd A;
-  VectorXd b;
-  const VectorXd& p;
-  const double sc_modulus;
+  MatrixXd A_;
+  VectorXd b_;
+  const VectorXd& p_;
+  const double sc_modulus_;
   const int nr_;
-  MatrixXd hess_sparsity;
-  bool strongly_convex;
+  MatrixXd hessian_sparsity_matrix_;
+  bool strongly_convex_;
 };
 
 template <int nz_>
-const MatrixXd StaticPolytope<nz_>::proj_mat = MatrixXd::Identity(nz_, nz_);
+const MatrixXd StaticPolytope<nz_>::kProjectionMatrix = MatrixXd::Identity(kNz,
+                                                                           kNz);
 
 template <int nz_>
-StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A_, const VectorXd& b_,
-                                    const VectorXd& p_, double margin_,
-                                    double sc_modulus_, bool normalize)
-    : ConvexSet(nz_, A_.rows(), margin_),
-      A(A_),
-      b(b_),
-      p(p_),
-      sc_modulus(sc_modulus_),
-      nr_(A_.rows()) {
-  static_assert(nz_ >= 2);
-  assert(A_.rows() == b_.rows());
-  assert(A_.cols() == nz_);
-  assert(A_.rows() >= 1);
-  assert(sc_modulus_ >= 0);
+StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A, const VectorXd& b,
+                                    const VectorXd& p, double margin,
+                                    double sc_modulus, bool normalize)
+    : ConvexSet(kNz, static_cast<int>(A.rows()), margin),
+      A_(A),
+      b_(b),
+      p_(p),
+      sc_modulus_(sc_modulus),
+      nr_(static_cast<int>(A.rows())) {
+  static_assert(kNz >= 1);
+  assert(A.rows() == b.rows());
+  assert(A.cols() == kNz);
+  assert(A.rows() >= 1);
+  assert(sc_modulus >= 0);
 
-  for (int i = 0; i < A_.rows(); ++i) {
-    const double normi = A.row(i).norm();
-    if (normi <= 1e-4) {
+  for (int i = 0; i < A.rows(); ++i) {
+    const double row_norm = A.row(i).norm();
+    if (row_norm <= 1e-4) {
       std::runtime_error("Row " + std::to_string(i) +
                          " of A is close to zero!");
     }
     if (normalize) {
-      A.row(i).normalize();
-      b(i) = b(i) / normi;
+      A_.row(i).normalize();
+      b_(i) = b_(i) / row_norm;
     }
   }
 
-  strongly_convex = (sc_modulus >= 1e-3);
-  hess_sparsity =
-      strongly_convex ? MatrixXd::Identity(nz_, nz_) : MatrixXd::Zero(nz_, nz_);
+  strongly_convex_ = (sc_modulus >= kStaticPolytopeScThreshold);
+  if (strongly_convex_)
+    hessian_sparsity_matrix_ = MatrixXd::Identity(kNz, kNz);
+  else
+    hessian_sparsity_matrix_ = MatrixXd::Zero(kNz, kNz);
 
-  check_dimensions();
+  CheckDimensions();
 }
 
 template <int nz_>
 StaticPolytope<nz_>::~StaticPolytope() {}
 
 template <int nz_>
-const Derivatives& StaticPolytope<nz_>::update_derivatives(const VectorXd& x,
-                                                           const VectorXd& dx,
-                                                           const VectorXd& z,
-                                                           const VectorXd& y,
-                                                           DFlags f) {
-  assert(x.rows() == nx_);
-  assert(dx.rows() == ndx_);
-  assert(z.rows() == nz_);
+const Derivatives& StaticPolytope<nz_>::UpdateDerivatives(
+    const VectorXd& x, const VectorXd& dx, const VectorXd& z, const VectorXd& y,
+    DerivativeFlags flag) {
+  assert(x.rows() == kNx);
+  assert(dx.rows() == kNdx);
+  assert(z.rows() == kNz);
   assert(y.rows() == nr_);
 
-  if (has_dflag(f, DFlags::A)) {
-    derivatives.A = A * (z - p) - b +
-                    sc_modulus * (z - p).squaredNorm() * VectorXd::Ones(nr_);
+  if (has_flag(flag, DerivativeFlags::f)) {
+    derivatives_.f = A_ * (z - p_) - b_ +
+                     sc_modulus_ * (z - p_).squaredNorm() * VectorXd::Ones(nr_);
   }
-  if (has_dflag(f, DFlags::A_z)) {
-    derivatives.A_z =
-        A + 2 * sc_modulus * VectorXd::Ones(nr_) * (z - p).transpose();
+  if (has_flag(flag, DerivativeFlags::f_z)) {
+    derivatives_.f_z =
+        A_ + 2 * sc_modulus_ * VectorXd::Ones(nr_) * (z - p_).transpose();
   }
-  if (has_dflag(f, DFlags::A_zz_y)) {
-    derivatives.A_zz_y =
-        2 * sc_modulus * y.sum() * MatrixXd::Identity(nz_, nz_);
+  if (has_flag(flag, DerivativeFlags::f_zz_y)) {
+    derivatives_.f_zz_y =
+        2 * sc_modulus_ * y.sum() * MatrixXd::Identity(kNz, kNz);
   }
-  return derivatives;
+  return derivatives_;
 }
 
 template <int nz_>
-void StaticPolytope<nz_>::lie_derivatives_x(const VectorXd& x,
-                                            const VectorXd& z,
-                                            const VectorXd& y,
-                                            const MatrixXd& fg,
-                                            MatrixXd& L_fgA_y) const {
-  assert(x.rows() == nx_);
-  assert(z.rows() == nz_);
+void StaticPolytope<nz_>::LieDerivatives(const VectorXd& x, const VectorXd& z,
+                                         const VectorXd& y, const MatrixXd& fg,
+                                         MatrixXd& L_fg_y) const {
+  assert(x.rows() == kNx);
+  assert(z.rows() == kNz);
   assert(y.rows() == nr_);
-  assert(fg.rows() == ndx_);
-  assert(L_fgA_y.rows() == 1);
-  assert(L_fgA_y.cols() == fg.cols());
+  assert(fg.rows() == kNdx);
+  assert(L_fg_y.rows() == 1);
+  assert(L_fg_y.cols() == fg.cols());
 
-  L_fgA_y = MatrixXd::Zero(1, L_fgA_y.cols());
+  L_fg_y = MatrixXd::Zero(1, L_fg_y.cols());
 }
 
 template <int nz_>
 inline int StaticPolytope<nz_>::dim() const {
-  return nz_;
+  return kNDim;
 }
 
 template <int nz_>
 inline int StaticPolytope<nz_>::nz() const {
-  return nz_;
+  return kNz;
 }
 
 template <int nz_>
@@ -159,27 +165,28 @@ inline int StaticPolytope<nz_>::nr() const {
 
 template <int nz_>
 inline int StaticPolytope<nz_>::nx() const {
-  return nx_;
+  return kNx;
 }
 
 template <int nz_>
 inline int StaticPolytope<nz_>::ndx() const {
-  return ndx_;
+  return kNdx;
 }
 
 template <int nz_>
-inline const MatrixXd& StaticPolytope<nz_>::projection_matrix() const {
-  return proj_mat;
+inline const MatrixXd& StaticPolytope<nz_>::get_projection_matrix() const {
+  return kProjectionMatrix;
 }
 
 template <int nz_>
-inline const MatrixXd& StaticPolytope<nz_>::hessian_sparsity_pattern() const {
-  return hess_sparsity;
+inline const MatrixXd& StaticPolytope<nz_>::get_hessian_sparsity_matrix()
+    const {
+  return hessian_sparsity_matrix_;
 }
 
 template <int nz_>
 inline bool StaticPolytope<nz_>::is_strongly_convex() const {
-  return strongly_convex;
+  return strongly_convex_;
 }
 
 typedef StaticPolytope<2> StaticPolytope2d;
