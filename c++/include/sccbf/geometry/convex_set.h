@@ -8,12 +8,15 @@ namespace sccbf {
 
 class ConvexSet {
  protected:
-  ConvexSet(int nz, int nr, double margin);
+  ConvexSet(int nz, int nr, int nx, int ndx, double margin);
 
+  VectorXd x_;
+  VectorXd dx_;
   Derivatives derivatives_;
   double margin_;
 
  public:
+  // Virtual functions.
   virtual ~ConvexSet() {}
 
   virtual const Derivatives& UpdateDerivatives(const VectorXd& x,
@@ -38,22 +41,62 @@ class ConvexSet {
 
   // post_transformation_matrix (allows for projections, user must ensure
   // compactness when needed).
-  virtual const MatrixXd& get_projection_matrix() const = 0;
+  virtual MatrixXd get_projection_matrix() const = 0;
 
-  // Hessian sparsity pattern.
-  virtual const MatrixXd& get_hessian_sparsity_matrix() const = 0;
+  // Hessian sparsity pattern [unused].
+  virtual MatrixXd get_hessian_sparsity_matrix() const = 0;
 
   virtual bool is_strongly_convex() const = 0;
+
+  // Non-virtual functions.
+  const Derivatives& UpdateDerivatives(const VectorXd& z, const VectorXd& y,
+                                       DerivativeFlags flag);
+
+  const Derivatives& get_derivatives() const;
+
+  void set_states(const VectorXd& x, const VectorXd& dx);
+
+  const VectorXd& x();
+
+  const VectorXd& dx();
 
   double get_safety_margin() const;
 
   void CheckDimensions() const;
-
-  const Derivatives& get_derivatives() const;
 };
 
-inline ConvexSet::ConvexSet(int nz, int nr, double margin)
-    : derivatives_(nz, nr), margin_(margin) {}
+inline ConvexSet::ConvexSet(int nz, int nr, int nx, int ndx,
+                            double margin)
+    : x_(nx),
+      dx_(ndx),
+      derivatives_(nz, nr),
+      margin_(margin) {
+  x_ = VectorXd::Zero(nx);
+  dx_ = VectorXd::Zero(ndx);
+}
+
+inline const Derivatives& ConvexSet::UpdateDerivatives(const VectorXd& z,
+                                                const VectorXd& y,
+                                                DerivativeFlags flag) {
+  return UpdateDerivatives(x_, dx_, z, y, flag);
+}
+
+inline const Derivatives& ConvexSet::get_derivatives() const {
+  return derivatives_;
+}
+
+inline void ConvexSet::set_states(const VectorXd& x, const VectorXd& dx) {
+  x_ = x;
+  dx_ = dx;
+}
+
+inline const VectorXd& ConvexSet::x() {
+  return x_;
+}
+
+inline const VectorXd& ConvexSet::dx() {
+  return dx_;
+}
 
 inline double ConvexSet::get_safety_margin() const { return margin_; }
 
@@ -65,19 +108,18 @@ inline void ConvexSet::CheckDimensions() const {
   assert(nx() >= 0);
   assert(ndx() >= 0);
 
-  const auto mat = get_projection_matrix();
+  assert(x_.rows() == nx());
+  assert(dx_.rows() == ndx());
+
+  MatrixXd mat = get_projection_matrix();
   assert(mat.rows() == dim());
   assert(mat.cols() == nz());
 
-  const auto hess = get_hessian_sparsity_matrix();
+  MatrixXd hess = get_hessian_sparsity_matrix();
   assert(hess.rows() == nz());
   assert(hess.cols() == nz());
 
   assert(margin_ >= 0);
-}
-
-inline const Derivatives& ConvexSet::get_derivatives() const {
-  return derivatives_;
 }
 
 }  // namespace sccbf

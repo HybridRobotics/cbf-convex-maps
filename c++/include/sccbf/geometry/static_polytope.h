@@ -43,9 +43,9 @@ class StaticPolytope : public ConvexSet {
 
   int ndx() const override;
 
-  const MatrixXd& get_projection_matrix() const override;
+  MatrixXd get_projection_matrix() const override;
 
-  const MatrixXd& get_hessian_sparsity_matrix() const override;
+  MatrixXd get_hessian_sparsity_matrix() const override;
 
   bool is_strongly_convex() const override;
 
@@ -55,26 +55,19 @@ class StaticPolytope : public ConvexSet {
   static constexpr int kNx = 0;
   static constexpr int kNdx = 0;
 
-  static const MatrixXd kProjectionMatrix;
-
   MatrixXd A_;
   VectorXd b_;
   const VectorXd& p_;
   const double sc_modulus_;
   const int nr_;
-  MatrixXd hessian_sparsity_matrix_;
   bool strongly_convex_;
 };
-
-template <int nz_>
-const MatrixXd StaticPolytope<nz_>::kProjectionMatrix = MatrixXd::Identity(kNz,
-                                                                           kNz);
 
 template <int nz_>
 StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A, const VectorXd& b,
                                     const VectorXd& p, double margin,
                                     double sc_modulus, bool normalize)
-    : ConvexSet(kNz, static_cast<int>(A.rows()), margin),
+    : ConvexSet(kNz, static_cast<int>(A.rows()), kNx, kNdx, margin),
       A_(A),
       b_(b),
       p_(p),
@@ -99,10 +92,6 @@ StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A, const VectorXd& b,
   }
 
   strongly_convex_ = (sc_modulus >= kStaticPolytopeScThreshold);
-  if (strongly_convex_)
-    hessian_sparsity_matrix_ = MatrixXd::Identity(kNz, kNz);
-  else
-    hessian_sparsity_matrix_ = MatrixXd::Zero(kNz, kNz);
 
   CheckDimensions();
 }
@@ -174,14 +163,17 @@ inline int StaticPolytope<nz_>::ndx() const {
 }
 
 template <int nz_>
-inline const MatrixXd& StaticPolytope<nz_>::get_projection_matrix() const {
-  return kProjectionMatrix;
+inline MatrixXd StaticPolytope<nz_>::get_projection_matrix() const {
+  return MatrixXd::Identity(kNz, kNz);
 }
 
 template <int nz_>
-inline const MatrixXd& StaticPolytope<nz_>::get_hessian_sparsity_matrix()
+inline MatrixXd StaticPolytope<nz_>::get_hessian_sparsity_matrix()
     const {
-  return hessian_sparsity_matrix_;
+  if (strongly_convex_)
+    return MatrixXd::Identity(kNz, kNz);
+  else
+    return MatrixXd::Zero(kNz, kNz);
 }
 
 template <int nz_>

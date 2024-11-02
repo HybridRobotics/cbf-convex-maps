@@ -36,9 +36,9 @@ class StaticEllipsoid : public ConvexSet {
 
   int ndx() const override;
 
-  const MatrixXd& get_projection_matrix() const override;
+  MatrixXd get_projection_matrix() const override;
 
-  const MatrixXd& get_hessian_sparsity_matrix() const override;
+  MatrixXd get_hessian_sparsity_matrix() const override;
 
   bool is_strongly_convex() const override;
 
@@ -49,21 +49,14 @@ class StaticEllipsoid : public ConvexSet {
   static constexpr int kNdx = 0;
   static constexpr int kNr = 1;
 
-  static const MatrixXd kProjectionMatrix;
-  static constexpr bool kStronglyConvex = true;
-
   const MatrixXd Q_;
   const VectorXd p_;
 };
 
 template <int nz_>
-const MatrixXd StaticEllipsoid<nz_>::kProjectionMatrix =
-    MatrixXd::Identity(kNz, kNz);
-
-template <int nz_>
 StaticEllipsoid<nz_>::StaticEllipsoid(const MatrixXd& Q, const VectorXd& p,
                                       double margin)
-    : ConvexSet(kNz, kNr, margin), Q_(Q), p_(p) {
+    : ConvexSet(kNz, kNr, kNx, kNdx, margin), Q_(Q), p_(p) {
   static_assert(kNz >= 2);
   assert((Q.rows() == kNz) && (Q.cols() == kNz));
   assert(p.rows() == kNz);
@@ -143,19 +136,19 @@ inline int StaticEllipsoid<nz_>::ndx() const {
 }
 
 template <int nz_>
-inline const MatrixXd& StaticEllipsoid<nz_>::get_projection_matrix() const {
-  return kProjectionMatrix;
+inline MatrixXd StaticEllipsoid<nz_>::get_projection_matrix() const {
+  return MatrixXd::Identity(kNz, kNz);
 }
 
 template <int nz_>
-inline const MatrixXd& StaticEllipsoid<nz_>::get_hessian_sparsity_matrix()
+inline MatrixXd StaticEllipsoid<nz_>::get_hessian_sparsity_matrix()
     const {
   return Q_;
 }
 
 template <int nz_>
 inline bool StaticEllipsoid<nz_>::is_strongly_convex() const {
-  return kStronglyConvex;
+  return true;
 }
 
 typedef StaticEllipsoid<2> StaticEllipsoid2d;

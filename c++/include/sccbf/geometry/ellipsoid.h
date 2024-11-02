@@ -36,9 +36,9 @@ class Ellipsoid : public ConvexSet {
 
   int ndx() const override;
 
-  const MatrixXd& get_projection_matrix() const override;
+  MatrixXd get_projection_matrix() const override;
 
-  const MatrixXd& get_hessian_sparsity_matrix() const override;
+  MatrixXd get_hessian_sparsity_matrix() const override;
 
   bool is_strongly_convex() const override;
 
@@ -49,23 +49,12 @@ class Ellipsoid : public ConvexSet {
   static constexpr int kNdx = (kNz == 2) ? 3 : 2 * kNz;
   static constexpr int kNr = 1;
 
-  static const MatrixXd kProjectionMatrix;
-  static const MatrixXd kHessianSparsityMatrix;
-  static constexpr bool kStronglyConvex = true;
-
   const MatrixXd Q_;
 };
 
 template <int nz_>
-const MatrixXd Ellipsoid<nz_>::kProjectionMatrix = MatrixXd::Identity(kNz, kNz);
-
-template <int nz_>
-const MatrixXd Ellipsoid<nz_>::kHessianSparsityMatrix = MatrixXd::Ones(kNz,
-                                                                       kNz);
-
-template <int nz_>
 Ellipsoid<nz_>::Ellipsoid(const MatrixXd& Q, double margin)
-    : ConvexSet(kNz, kNr, margin), Q_(Q) {
+    : ConvexSet(kNz, kNr, kNx, kNdx, margin), Q_(Q) {
   static_assert((kNz == 2) || (kNz == 3));
   assert((Q.rows() == kNz) && (Q.cols() == kNz));
   if (!Q.isApprox(Q.transpose())) {
@@ -179,18 +168,18 @@ inline int Ellipsoid<nz_>::ndx() const {
 }
 
 template <int nz_>
-inline const MatrixXd& Ellipsoid<nz_>::get_projection_matrix() const {
-  return kProjectionMatrix;
+inline MatrixXd Ellipsoid<nz_>::get_projection_matrix() const {
+  return MatrixXd::Identity(kNz, kNz);
 }
 
 template <int nz_>
-inline const MatrixXd& Ellipsoid<nz_>::get_hessian_sparsity_matrix() const {
-  return kHessianSparsityMatrix;
+inline MatrixXd Ellipsoid<nz_>::get_hessian_sparsity_matrix() const {
+  return MatrixXd::Ones(kNz, kNz);
 }
 
 template <int nz_>
 inline bool Ellipsoid<nz_>::is_strongly_convex() const {
-  return kStronglyConvex;
+  return true;
 }
 
 typedef Ellipsoid<2> Ellipsoid2d;

@@ -44,9 +44,9 @@ class Polytope : public ConvexSet {
 
   int ndx() const override;
 
-  const MatrixXd& get_projection_matrix() const override;
+  MatrixXd get_projection_matrix() const override;
 
-  const MatrixXd& get_hessian_sparsity_matrix() const override;
+  MatrixXd get_hessian_sparsity_matrix() const override;
 
   bool is_strongly_convex() const override;
 
@@ -56,23 +56,17 @@ class Polytope : public ConvexSet {
   static constexpr int kNx = kNz + kNz * kNz;
   static constexpr int kNdx = (kNz == 2) ? 3 : 2 * kNz;
 
-  static const MatrixXd kProjectionMatrix;
-
   MatrixXd A_;
   VectorXd b_;
   const double sc_modulus_;
   const int nr_;
-  MatrixXd hessian_sparsity_matrix_;
   bool strongly_convex_;
 };
 
 template <int nz_>
-const MatrixXd Polytope<nz_>::kProjectionMatrix = MatrixXd::Identity(kNz, kNz);
-
-template <int nz_>
 Polytope<nz_>::Polytope(const MatrixXd& A, const VectorXd& b, double margin,
                         double sc_modulus, bool normalize)
-    : ConvexSet(kNz, static_cast<int>(A.rows()), margin),
+    : ConvexSet(kNz, static_cast<int>(A.rows()), kNx, kNdx, margin),
       A_(A),
       b_(b),
       sc_modulus_(sc_modulus),
@@ -98,10 +92,6 @@ Polytope<nz_>::Polytope(const MatrixXd& A, const VectorXd& b, double margin,
   }
 
   strongly_convex_ = (sc_modulus >= kPolytopeScThreshold);
-  if (strongly_convex_)
-    hessian_sparsity_matrix_ = MatrixXd::Identity(kNz, kNz);
-  else
-    hessian_sparsity_matrix_ = MatrixXd::Zero(kNz, kNz);
 
   CheckDimensions();
 }
@@ -208,13 +198,16 @@ inline int Polytope<nz_>::ndx() const {
 }
 
 template <int nz_>
-inline const MatrixXd& Polytope<nz_>::get_projection_matrix() const {
-  return kProjectionMatrix;
+inline MatrixXd Polytope<nz_>::get_projection_matrix() const {
+  return MatrixXd::Identity(kNz, kNz);
 }
 
 template <int nz_>
-inline const MatrixXd& Polytope<nz_>::get_hessian_sparsity_matrix() const {
-  return hessian_sparsity_matrix_;
+inline MatrixXd Polytope<nz_>::get_hessian_sparsity_matrix() const {
+  if (strongly_convex_)
+    return MatrixXd::Identity(kNz, kNz);
+  else
+    return MatrixXd::Zero(kNz, kNz);
 }
 
 template <int nz_>
