@@ -16,33 +16,6 @@ namespace {
 
 using namespace sccbf;
 
-// Random matrix functions
-void RandomSpdMatrix(MatrixXd& mat, const double eps) {
-  const int n = static_cast<int>(mat.rows());
-  assert(mat.cols() == n);
-
-  const MatrixXd sqrt_mat = MatrixXd::Random(n, n);
-  mat = sqrt_mat.transpose() * sqrt_mat + eps * MatrixXd::Identity(n, n);
-}
-
-void RandomPolytope(const VectorXd& c, double in_radius, MatrixXd& A,
-                    VectorXd& b) {
-  const int nz = static_cast<int>(c.rows());
-  const int nr = static_cast<int>(A.rows());
-  assert(b.rows() == nr);
-  assert(A.cols() == nz);
-  assert(in_radius >= 0);
-
-  for (int i = 0; i < nr;) {
-    VectorXd normal = VectorXd::Random(nz);
-    if (normal.norm() < 1e-4) continue;
-    normal.normalize();
-    A.row(i) = normal.transpose();
-    b(i) = normal.transpose() * c + in_radius;
-    ++i;
-  }
-}
-
 // State variables struct, and random state variables
 struct StateVariables {
   VectorXd x;
@@ -176,8 +149,8 @@ testing::AssertionResult AssertDerivativeEQ(
 
 // Geometry tests
 const DerivativeFlags kFlag = DerivativeFlags::f | DerivativeFlags::f_x |
-                        DerivativeFlags::f_z | DerivativeFlags::f_xz_y |
-                        DerivativeFlags::f_zz_y;
+                              DerivativeFlags::f_z | DerivativeFlags::f_xz_y |
+                              DerivativeFlags::f_zz_y;
 const double kDerivativeErrorTol = 1e-3;
 
 // Ellipsoid test
