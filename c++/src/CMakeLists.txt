@@ -15,8 +15,8 @@ add_library(${LIB_CORE}
 target_include_directories(${LIB_CORE}
   PUBLIC
     "${PROJECT_SOURCE_DIR}/include/"
-  PRIVATE
-    "${IPOPT_INCLUDE_DIRS}"
+  # PRIVATE
+    ${IPOPT_INCLUDE_DIRS}
 )
 
 target_link_libraries(${LIB_CORE}

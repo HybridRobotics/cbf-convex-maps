@@ -8,15 +8,15 @@
 #include <cassert>
 #include <memory>
 
+#include "sccbf/collision/collision_info.h"
+#include "sccbf/collision/collision_pair.h"
 #include "sccbf/data_types.h"
 #include "sccbf/derivatives.h"
 #include "sccbf/geometry/convex_set.h"
-#include "sccbf/collision/collision_info.h"
-#include "sccbf/collision/collision_pair.h"
 
 namespace sccbf {
 
-DistanceProblem::DistanceProblem(CollisionPair& cp): cp_(cp) {}
+DistanceProblem::DistanceProblem(CollisionPair& cp) : cp_(cp) {}
 
 DistanceProblem::~DistanceProblem() {}
 
@@ -146,7 +146,7 @@ bool DistanceProblem::eval_jac_g(Ipopt::Index n, const Ipopt::Number* x,
   const int nz2 = cp_.C2_->nz();
   const int nr1 = cp_.C1_->nr();
   const int nr2 = cp_.C2_->nr();
-  
+
   if (values == NULL) {
     // Return the structure of the Jacobian.
 
@@ -203,7 +203,7 @@ bool DistanceProblem::eval_h(Ipopt::Index n, const Ipopt::Number* x,
   const int nz2 = cp_.C2_->nz();
   const int nr1 = cp_.C1_->nr();
   const int nr2 = cp_.C2_->nr();
-  
+
   if (values == NULL) {
     // Return the Hessian structure. This is a symmetric matrix, fill the
     // lower-left triangle only.
@@ -235,14 +235,15 @@ bool DistanceProblem::eval_h(Ipopt::Index n, const Ipopt::Number* x,
     const MatrixXd& P2 = cp_.C2_->get_projection_matrix();
 
     MatrixXd hess(n, n);
-    const auto hess_11 = 2 * obj_factor * P1.transpose() * cp_.info_->M * P1 + d1.f_zz_y;
+    const auto hess_11 =
+        2 * obj_factor * P1.transpose() * cp_.info_->M * P1 + d1.f_zz_y;
     const auto hess_21 = -2 * obj_factor * P2.transpose() * cp_.info_->M * P1;
-    const auto hess_22 = 2 * obj_factor * P2.transpose() * cp_.info_->M * P2 + d2.f_zz_y;
+    const auto hess_22 =
+        2 * obj_factor * P2.transpose() * cp_.info_->M * P2 + d2.f_zz_y;
     hess.topLeftCorner(nz1, nz1).triangularView<Eigen::Lower>() =
         hess_11.triangularView<Eigen::Lower>();
     hess.bottomLeftCorner(nz2, nz1) = hess_21;
-    hess.bottomRightCorner(nz2, nz2)
-        .triangularView<Eigen::Lower>() =
+    hess.bottomRightCorner(nz2, nz2).triangularView<Eigen::Lower>() =
         hess_22.triangularView<Eigen::Lower>();
 
     Ipopt::Index idx = 0;
@@ -292,13 +293,13 @@ DistanceSolver::DistanceSolver() {
   SetOption("max_iter", 1000);
   SetOption("max_wall_time", 1.0);
   SetOption("tol", 1e-4);
-  SetOption("dual_inf_tol", 1e-4);
+  SetOption("dual_inf_tol", 1e-6);
   SetOption("constr_viol_tol", 1e-4);
-  SetOption("compl_inf_tol", 1e-6);
+  SetOption("compl_inf_tol", 1e-8);
   SetOption("acceptable_tol", 1e-3);
-  SetOption("acceptable_dual_inf_tol", 1e-3);
+  SetOption("acceptable_dual_inf_tol", 1e-5);
   SetOption("acceptable_constr_viol_tol", 1e-3);
-  SetOption("compl_inf_tol", 1e-5);
+  SetOption("compl_inf_tol", 1e-6);
 
   // Linear solver options.
   // The MA27 solver can be obtained for free (for academic purposes) from
@@ -311,12 +312,12 @@ DistanceSolver::DistanceSolver() {
   SetOption("timing_statistics", "no");
   SetOption("print_timing_statistics", "no");
   SetOption("print_user_options", "no");
-  SetOption("print_level", 0); // 0 - 12.
-  SetOption("sb", "yes"); // Suppresses copyright information.
+  SetOption("print_level", 0);  // 0 - 12.
+  SetOption("sb", "yes");       // Suppresses copyright information.
   SetOption("print_frequency_time", 1e-5);
 
   // For debugging derivatives.                 // [Debug]
-  SetOption("derivative_test", "none"); // ("none", "second-order")
+  SetOption("derivative_test", "none");  // ("none", "second-order")
   SetOption("derivative_test_tol", 1e-3);
 
 #ifndef NDEBUG

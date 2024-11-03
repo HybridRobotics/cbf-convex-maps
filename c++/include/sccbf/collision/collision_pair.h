@@ -2,7 +2,6 @@
 #define SCCBF_COLLISION_COLLISION_PAIR_H_
 
 #include <IpTNLP.hpp>
-
 #include <memory>
 
 #include "sccbf/data_types.h"

@@ -15,6 +15,7 @@ set(LIB_TEST_SOURCES
   "${PROJECT_SOURCE_DIR}/tests/math_utils/matrixfunctions_test.cc"
   "${PROJECT_SOURCE_DIR}/tests/math_utils/numericalgradient_test.cc"
   "${PROJECT_SOURCE_DIR}/tests/geometry/geometry_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/collision/distance_test.cc"
 )
 
 add_executable(${LIB_CORE}-tests

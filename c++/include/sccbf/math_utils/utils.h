@@ -35,6 +35,16 @@ inline void HatMap(const Eigen::MatrixBase<Derived>& vec, MatrixXd& vec_hat) {
   }
 }
 
+inline void HatMap(const VectorXd& vec, MatrixXd& vec_hat) {
+  const int dim = static_cast<int>(vec_hat.rows());
+  assert((dim == 2) || (dim == 3));
+
+  if (dim == 2)
+    HatMap<2>(vec, vec_hat);
+  else
+    HatMap<3>(vec, vec_hat);
+}
+
 // Implementation from "P. Blanchard, D. J. Higham, and N. J. Higham.
 // [[https://doi.org/10.1093/imanum/draa038][Computing the Log-Sum-Exp and
 // Softmax Functions]]. IMA J. Numer. Anal., Advance access, 2020."
@@ -65,6 +75,7 @@ inline void EulerToRotation(double angle_x, double angle_y, double angle_z,
 
 template <int dim>
 inline void RandomRotation(MatrixXd& rotation) {
+  static_assert((dim == 2) || (dim == 3));
   assert((rotation.rows() == dim) && (rotation.cols() == dim));
 
   std::random_device rd;
@@ -85,6 +96,16 @@ inline void RandomRotation(MatrixXd& rotation) {
     const double angle_z = dis(gen);
     EulerToRotation(angle_x, angle_y, angle_z, rotation);
   }
+}
+
+inline void RandomRotation(MatrixXd& rotation) {
+  const int dim = static_cast<int>(rotation.rows());
+  assert((dim == 2) || (dim == 3));
+
+  if (dim == 2)
+    RandomRotation<2>(rotation);
+  else
+    RandomRotation<3>(rotation);
 }
 
 inline void RandomSpdMatrix(MatrixXd& mat, const double eps) {

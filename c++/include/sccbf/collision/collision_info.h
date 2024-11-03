@@ -5,7 +5,6 @@
 
 #include "sccbf/data_types.h"
 
-
 namespace sccbf {
 
 struct CollisionInfo {
@@ -16,12 +15,12 @@ struct CollisionInfo {
   CollisionInfo(const MatrixXd& M);
 };
 
-inline CollisionInfo::CollisionInfo(int nz): M(nz, nz) {}
+inline CollisionInfo::CollisionInfo(int nz) : M(nz, nz) {}
 
-inline CollisionInfo::CollisionInfo(const MatrixXd& M): M(M) {
+inline CollisionInfo::CollisionInfo(const MatrixXd& M) : M(M) {
   assert(M.rows() == M.cols());
 }
 
-} // namespace sccbf
+}  // namespace sccbf
 
-#endif // SCCBF_COLLISION_COLLISION_INFO_H_
+#endif  // SCCBF_COLLISION_COLLISION_INFO_H_
