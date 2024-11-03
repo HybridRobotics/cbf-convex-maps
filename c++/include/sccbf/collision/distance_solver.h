@@ -1,5 +1,5 @@
-#ifndef SCCBF_DISTANCE_SOLVER_H_
-#define SCCBF_DISTANCE_SOLVER_H_
+#ifndef SCCBF_COLLISION_DISTANCE_SOLVER_H_
+#define SCCBF_COLLISION_DISTANCE_SOLVER_H_
 
 #include <IpIpoptApplication.hpp>
 #include <IpTNLP.hpp>
@@ -9,17 +9,13 @@
 
 namespace sccbf {
 
-class ConvexSet;
+struct CollisionPair;
 
 class DistanceProblem : public Ipopt::TNLP {
  public:
-  DistanceProblem(const std::shared_ptr<ConvexSet>& C1, const VectorXd& x1,
-                  const std::shared_ptr<ConvexSet>& C2, const VectorXd& x2,
-                  const MatrixXd& M);
+  DistanceProblem(CollisionPair& cp);
 
   ~DistanceProblem();
-
-  void set_states(const VectorXd& x1, const VectorXd& x2);
 
   // Virtual functions.
   bool get_nlp_info(Ipopt::Index& n, Ipopt::Index& m, Ipopt::Index& nnz_jac_g,
@@ -68,31 +64,23 @@ class DistanceProblem : public Ipopt::TNLP {
   DistanceProblem& operator=(const DistanceProblem&) = delete;
 
  private:
-  const std::shared_ptr<ConvexSet> C1_;
-  const std::shared_ptr<ConvexSet> C2_;
-  VectorXd x1_;
-  VectorXd x2_;
-  MatrixXd M_;
-  VectorXd z_;
-  VectorXd lambda_;
-  double dist2_;
+  CollisionPair& cp_;
 };
 
+// Wrapper.
 class DistanceSolver {
  public:
   DistanceSolver();
 
-  double MinimumDistance(DistanceProblem& prob);
-
   ~DistanceSolver();
+
+  bool MinimumDistance(Ipopt::SmartPtr<Ipopt::TNLP> prob_ptr);
 
   void SetOption(const std::string& name, const std::string& value);
 
   void SetOption(const std::string& name, int value);
 
   void SetOption(const std::string& name, double value);
-
-  double GetTotalWallclockTime();
 
   DistanceSolver(const DistanceSolver&) = delete;
 
@@ -104,4 +92,4 @@ class DistanceSolver {
 
 }  // namespace sccbf
 
-#endif  // SCCBF_DISTANCE_SOLVER_H_
+#endif  // SCCBF_COLLISION_DISTANCE_SOLVER_H_

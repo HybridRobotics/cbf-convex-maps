@@ -168,8 +168,7 @@ inline MatrixXd StaticPolytope<nz_>::get_projection_matrix() const {
 }
 
 template <int nz_>
-inline MatrixXd StaticPolytope<nz_>::get_hessian_sparsity_matrix()
-    const {
+inline MatrixXd StaticPolytope<nz_>::get_hessian_sparsity_matrix() const {
   if (strongly_convex_)
     return MatrixXd::Identity(kNz, kNz);
   else

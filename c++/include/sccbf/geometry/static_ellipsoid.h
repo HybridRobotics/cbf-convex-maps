@@ -141,8 +141,7 @@ inline MatrixXd StaticEllipsoid<nz_>::get_projection_matrix() const {
 }
 
 template <int nz_>
-inline MatrixXd StaticEllipsoid<nz_>::get_hessian_sparsity_matrix()
-    const {
+inline MatrixXd StaticEllipsoid<nz_>::get_hessian_sparsity_matrix() const {
   return Q_;
 }
 

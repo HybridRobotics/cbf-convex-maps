@@ -1,4 +1,4 @@
-#include "sccbf/distance_solver.h"
+#include "sccbf/collision/distance_solver.h"
 
 #include <Eigen/Dense>
 #include <IpIpoptApplication.hpp>
@@ -11,48 +11,29 @@
 #include "sccbf/data_types.h"
 #include "sccbf/derivatives.h"
 #include "sccbf/geometry/convex_set.h"
+#include "sccbf/collision/collision_info.h"
+#include "sccbf/collision/collision_pair.h"
 
 namespace sccbf {
 
-DistanceProblem::DistanceProblem(const std::shared_ptr<ConvexSet>& C1,
-                                 const VectorXd& x1,
-                                 const std::shared_ptr<ConvexSet>& C2,
-                                 const VectorXd& x2, const MatrixXd& M)
-    : C1_(C1),
-      C2_(C2),
-      x1_(x1),
-      x2_(x2),
-      M_(M),
-      z_(C1_->nz() + C2_->nz()),
-      lambda_(C1_->nr() + C2_->nr()) {
-  assert(C1->dim() == C2->dim());
-  assert(x1.rows() == C1->nx());
-  assert(x2.rows() == C2->nx());
-  assert((M.rows() == C1->dim()) && (M.cols() == C1->dim()));
-
-  z_ = VectorXd::Zero(C1->nz() + C2->nz());
-  lambda_ = VectorXd::Zero(C1->nr() + C2->nr());
-}
+DistanceProblem::DistanceProblem(CollisionPair& cp): cp_(cp) {}
 
 DistanceProblem::~DistanceProblem() {}
-
-void DistanceProblem::set_states(const VectorXd& x1, const VectorXd& x2) {
-  assert(x1.rows() == C1_->nx());
-  assert(x2.rows() == C2_->nx());
-
-  x1_ = x1;
-  x2_ = x2;
-}
 
 // Virtual functions.
 bool DistanceProblem::get_nlp_info(Ipopt::Index& n, Ipopt::Index& m,
                                    Ipopt::Index& nnz_jac_g,
                                    Ipopt::Index& nnz_h_lag,
                                    IndexStyleEnum& index_style) {
-  n = C1_->nz() + C2_->nz();
-  m = C1_->nr() + C2_->nr();
+  const int nz1 = cp_.C1_->nz();
+  const int nz2 = cp_.C2_->nz();
+  const int nr1 = cp_.C1_->nr();
+  const int nr2 = cp_.C2_->nr();
+
+  n = nz1 + nz2;
+  m = nr1 + nr2;
   // Jacobian corresponding to each convex set is dense.
-  nnz_jac_g = C1_->nz() * C1_->nr() + C2_->nz() * C2_->nr();
+  nnz_jac_g = nz1 * nr1 + nz2 * nr2;
   // Hessian can be dense (in general), but only lower left corner is needed (it
   // is symmetric).
   nnz_h_lag = static_cast<int>((n * n + n) / 2);
@@ -81,12 +62,12 @@ bool DistanceProblem::get_starting_point(Ipopt::Index n, bool init_x,
                                          Ipopt::Number* lambda) {
   if (init_x) {
     for (int i = 0; i < n; ++i) {
-      x[i] = z_(i);
+      x[i] = cp_.z_(i);
     }
   }
   if (init_lambda) {
     for (int i = 0; i < m; ++i) {
-      lambda[i] = lambda_(i);
+      lambda[i] = cp_.lambda_(i);
     }
   }
 
@@ -95,29 +76,34 @@ bool DistanceProblem::get_starting_point(Ipopt::Index n, bool init_x,
 
 bool DistanceProblem::eval_f(Ipopt::Index /*n*/, const Ipopt::Number* x,
                              bool /*new_x*/, Ipopt::Number& obj_value) {
-  Eigen::Map<const VectorXd> z1(x, C1_->nz());
-  Eigen::Map<const VectorXd> z2(x + C1_->nz(), C2_->nz());
-  const MatrixXd& P1 = C1_->get_projection_matrix();
-  const MatrixXd& P2 = C2_->get_projection_matrix();
+  const int nz1 = cp_.C1_->nz();
+  const int nz2 = cp_.C2_->nz();
+  Eigen::Map<const VectorXd> z1(x, nz1);
+  Eigen::Map<const VectorXd> z2(x + nz1, nz2);
+  const MatrixXd& P1 = cp_.C1_->get_projection_matrix();
+  const MatrixXd& P2 = cp_.C2_->get_projection_matrix();
   const auto diff = P1 * z1 - P2 * z2;
-  obj_value = diff.transpose() * M_ * diff;
+  obj_value = diff.transpose() * cp_.info_->M * diff;
 
   return true;
 }
 
 bool DistanceProblem::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x,
                                   bool /*new_x*/, Ipopt::Number* grad_f) {
-  Eigen::Map<const VectorXd> z1(x, C1_->nz());
-  Eigen::Map<const VectorXd> z2(x + C1_->nz(), C2_->nz());
-  const MatrixXd& P1 = C1_->get_projection_matrix();
-  const MatrixXd& P2 = C2_->get_projection_matrix();
-  const auto diff = M_ * (P1 * z1 - P2 * z2);
+  const int nz1 = cp_.C1_->nz();
+  const int nz2 = cp_.C2_->nz();
+
+  Eigen::Map<const VectorXd> z1(x, nz1);
+  Eigen::Map<const VectorXd> z2(x + nz1, nz2);
+  const MatrixXd& P1 = cp_.C1_->get_projection_matrix();
+  const MatrixXd& P2 = cp_.C2_->get_projection_matrix();
+  const auto diff = cp_.info_->M * (P1 * z1 - P2 * z2);
   const auto grad_z1 = 2 * P1.transpose() * diff;
   const auto grad_z2 = -2 * P2.transpose() * diff;
-  for (int i = 0; i < C1_->nz(); ++i) {
+  for (int i = 0; i < nz1; ++i) {
     grad_f[i] = grad_z1(i);
   }
-  for (int i = C1_->nz(), j = 0; i < n; ++i, ++j) {
+  for (int i = nz1, j = 0; i < n; ++i, ++j) {
     grad_f[i] = grad_z2(j);
   }
 
@@ -126,21 +112,26 @@ bool DistanceProblem::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x,
 
 bool DistanceProblem::eval_g(Ipopt::Index /*n*/, const Ipopt::Number* x,
                              bool /*new_x*/, Ipopt::Index m, Ipopt::Number* g) {
-  Eigen::Map<const VectorXd> z1(x, C1_->nz());
-  Eigen::Map<const VectorXd> z2(x + C1_->nz(), C2_->nz());
+  const int nz1 = cp_.C1_->nz();
+  const int nz2 = cp_.C2_->nz();
+  const int nr1 = cp_.C1_->nr();
+  const int nr2 = cp_.C2_->nr();
+
+  Eigen::Map<const VectorXd> z1(x, nz1);
+  Eigen::Map<const VectorXd> z2(x + nz1, nz2);
   const DerivativeFlags flag = DerivativeFlags::f;
 
-  const VectorXd dx1(C1_->ndx());
-  const VectorXd y1(C1_->nr());
-  const Derivatives& d1 = C1_->UpdateDerivatives(x1_, dx1, z1, y1, flag);
-  for (int i = 0; i < C1_->nr(); ++i) {
+  const VectorXd dx1(cp_.C1_->ndx());
+  const VectorXd y1(nr1);
+  const Derivatives& d1 = cp_.C1_->UpdateDerivatives(z1, y1, flag);
+  for (int i = 0; i < nr1; ++i) {
     g[i] = d1.f(i);
   }
 
-  const VectorXd dx2(C2_->ndx());
-  const VectorXd y2(C2_->nr());
-  const Derivatives& d2 = C2_->UpdateDerivatives(x2_, dx2, z2, y2, flag);
-  for (int i = C1_->nr(), j = 0; i < m; ++i, ++j) {
+  const VectorXd dx2(cp_.C2_->ndx());
+  const VectorXd y2(nr2);
+  const Derivatives& d2 = cp_.C2_->UpdateDerivatives(z2, y2, flag);
+  for (int i = nr1, j = 0; i < m; ++i, ++j) {
     g[i] = d2.f(j);
   }
 
@@ -151,6 +142,11 @@ bool DistanceProblem::eval_jac_g(Ipopt::Index n, const Ipopt::Number* x,
                                  bool /*new_x*/, Ipopt::Index m,
                                  Ipopt::Index /*nele_jac*/, Ipopt::Index* iRow,
                                  Ipopt::Index* jCol, Ipopt::Number* values) {
+  const int nz1 = cp_.C1_->nz();
+  const int nz2 = cp_.C2_->nz();
+  const int nr1 = cp_.C1_->nr();
+  const int nr2 = cp_.C2_->nr();
+  
   if (values == NULL) {
     // Return the structure of the Jacobian.
 
@@ -158,15 +154,15 @@ bool DistanceProblem::eval_jac_g(Ipopt::Index n, const Ipopt::Number* x,
     // Fill in row and column indices in a column-major order, the same order
     // that Eigen stores its elements by default.
     Ipopt::Index idx = 0;
-    for (int col = 0; col < C1_->nz(); ++col) {
-      for (int row = 0; row < C1_->nr(); ++row) {
+    for (int col = 0; col < nz1; ++col) {
+      for (int row = 0; row < nr1; ++row) {
         iRow[idx] = row;
         jCol[idx] = col;
         idx++;
       }
     }
-    for (int col = C1_->nz(); col < n; ++col) {
-      for (int row = C1_->nr(); row < m; ++row) {
+    for (int col = nz1; col < n; ++col) {
+      for (int row = nr1; row < m; ++row) {
         iRow[idx] = row;
         jCol[idx] = col;
         idx++;
@@ -175,23 +171,22 @@ bool DistanceProblem::eval_jac_g(Ipopt::Index n, const Ipopt::Number* x,
   } else {
     // Return the values of the Jacobian of the constraints.
 
-    Eigen::Map<const VectorXd> z1(x, C1_->nz());
-    Eigen::Map<const VectorXd> z2(x + C1_->nz(), C2_->nz());
+    Eigen::Map<const VectorXd> z1(x, nz1);
+    Eigen::Map<const VectorXd> z2(x + nz1, nz2);
     const DerivativeFlags flag = DerivativeFlags::f_z;
 
-    const VectorXd dx1(C1_->ndx());
-    const VectorXd y1(C1_->nr());
-    const Derivatives& d1 = C1_->UpdateDerivatives(x1_, dx1, z1, y1, flag);
+    const VectorXd dx1(cp_.C1_->ndx());
+    const VectorXd y1(nr1);
+    const Derivatives& d1 = cp_.C1_->UpdateDerivatives(z1, y1, flag);
     // Since values are assigned in a column-major order (the same default order
     // as Eigen::MatrixXd), we can directly map the Jacobian elements.
-    Eigen::Map<MatrixXd> f1_z(values, C1_->nr(), C1_->nz());
+    Eigen::Map<MatrixXd> f1_z(values, nr1, nz1);
     f1_z = d1.f_z;
 
-    const VectorXd dx2(C2_->ndx());
-    const VectorXd y2(C2_->nr());
-    const Derivatives& d2 = C2_->UpdateDerivatives(x2_, dx2, z2, y2, flag);
-    Eigen::Map<MatrixXd> f2_z(values + C1_->nr() * C1_->nz(), C2_->nr(),
-                              C2_->nz());
+    const VectorXd dx2(cp_.C2_->ndx());
+    const VectorXd y2(nr2);
+    const Derivatives& d2 = cp_.C2_->UpdateDerivatives(z2, y2, flag);
+    Eigen::Map<MatrixXd> f2_z(values + nr1 * nz1, nr2, nz2);
     f2_z = d2.f_z;
   }
 
@@ -204,6 +199,11 @@ bool DistanceProblem::eval_h(Ipopt::Index n, const Ipopt::Number* x,
                              bool /*new_lambda*/, Ipopt::Index /*nele_hess*/,
                              Ipopt::Index* iRow, Ipopt::Index* jCol,
                              Ipopt::Number* values) {
+  const int nz1 = cp_.C1_->nz();
+  const int nz2 = cp_.C2_->nz();
+  const int nr1 = cp_.C1_->nr();
+  const int nr2 = cp_.C2_->nr();
+  
   if (values == NULL) {
     // Return the Hessian structure. This is a symmetric matrix, fill the
     // lower-left triangle only.
@@ -220,28 +220,28 @@ bool DistanceProblem::eval_h(Ipopt::Index n, const Ipopt::Number* x,
     // Return the Hessian values. This is a symmetric matrix, fill the
     // lower-left triangle only.
 
-    Eigen::Map<const VectorXd> z1(x, C1_->nz());
-    Eigen::Map<const VectorXd> z2(x + C1_->nz(), C2_->nz());
-    Eigen::Map<const VectorXd> y1(lambda, C1_->nr());
-    Eigen::Map<const VectorXd> y2(lambda + C1_->nr(), C2_->nr());
+    Eigen::Map<const VectorXd> z1(x, nz1);
+    Eigen::Map<const VectorXd> z2(x + nz1, nz2);
+    Eigen::Map<const VectorXd> y1(lambda, nr1);
+    Eigen::Map<const VectorXd> y2(lambda + nr1, nr2);
     const DerivativeFlags flag = DerivativeFlags::f_zz_y;
 
-    const VectorXd dx1(C1_->ndx());
-    const Derivatives& d1 = C1_->UpdateDerivatives(x1_, dx1, z1, y1, flag);
-    const VectorXd dx2(C2_->ndx());
-    const Derivatives& d2 = C2_->UpdateDerivatives(x2_, dx2, z2, y2, flag);
+    const VectorXd dx1(cp_.C1_->ndx());
+    const Derivatives& d1 = cp_.C1_->UpdateDerivatives(z1, y1, flag);
+    const VectorXd dx2(cp_.C2_->ndx());
+    const Derivatives& d2 = cp_.C2_->UpdateDerivatives(z2, y2, flag);
 
-    const MatrixXd& P1 = C1_->get_projection_matrix();
-    const MatrixXd& P2 = C2_->get_projection_matrix();
+    const MatrixXd& P1 = cp_.C1_->get_projection_matrix();
+    const MatrixXd& P2 = cp_.C2_->get_projection_matrix();
 
     MatrixXd hess(n, n);
-    const auto hess_11 = 2 * obj_factor * P1.transpose() * M_ * P1 + d1.f_zz_y;
-    const auto hess_21 = -2 * obj_factor * P2.transpose() * M_ * P1;
-    const auto hess_22 = 2 * obj_factor * P2.transpose() * M_ * P2 + d2.f_zz_y;
-    hess.topLeftCorner(C1_->nz(), C1_->nz()).triangularView<Eigen::Lower>() =
+    const auto hess_11 = 2 * obj_factor * P1.transpose() * cp_.info_->M * P1 + d1.f_zz_y;
+    const auto hess_21 = -2 * obj_factor * P2.transpose() * cp_.info_->M * P1;
+    const auto hess_22 = 2 * obj_factor * P2.transpose() * cp_.info_->M * P2 + d2.f_zz_y;
+    hess.topLeftCorner(nz1, nz1).triangularView<Eigen::Lower>() =
         hess_11.triangularView<Eigen::Lower>();
-    hess.bottomLeftCorner(C2_->nz(), C1_->nz()) = hess_21;
-    hess.bottomRightCorner(C2_->nz(), C2_->nz())
+    hess.bottomLeftCorner(nz2, nz1) = hess_21;
+    hess.bottomRightCorner(nz2, nz2)
         .triangularView<Eigen::Lower>() =
         hess_22.triangularView<Eigen::Lower>();
 
@@ -268,36 +268,74 @@ void DistanceProblem::finalize_solution(
       (status == Ipopt::CPUTIME_EXCEEDED) ||
       (status == Ipopt::STOP_AT_ACCEPTABLE_POINT)) {
     Eigen::Map<const VectorXd> z_opt(x, n);
-    z_ = z_opt;
+    cp_.z_ = z_opt;
     Eigen::Map<const VectorXd> lambda_opt(lambda, m);
-    lambda_ = lambda_opt;
-    dist2_ = obj_value;
+    cp_.lambda_ = lambda_opt;
+    cp_.dist2_ = obj_value;
   }
 }
 
 DistanceSolver::DistanceSolver() {
   app_ = std::make_unique<Ipopt::IpoptApplication>();
 
+  // NLP options.
+  SetOption("jacobian_approximation", "exact");
+  SetOption("gradient_approximation", "exact");
+
+  // Hessian approximation options.
+  SetOption("hessian_approximation", "exact");
+
+  // Warm start options.
+  SetOption("warm_start_init_point", "yes");
+
+  // Termination options.                       // [Tune]
+  SetOption("max_iter", 1000);
+  SetOption("max_wall_time", 1.0);
+  SetOption("tol", 1e-4);
+  SetOption("dual_inf_tol", 1e-4);
+  SetOption("constr_viol_tol", 1e-4);
+  SetOption("compl_inf_tol", 1e-6);
+  SetOption("acceptable_tol", 1e-3);
+  SetOption("acceptable_dual_inf_tol", 1e-3);
+  SetOption("acceptable_constr_viol_tol", 1e-3);
+  SetOption("compl_inf_tol", 1e-5);
+
+  // Linear solver options.
   // The MA27 solver can be obtained for free (for academic purposes) from
   // http://www.hsl.rl.ac.uk/ipopt/, and must be compiled into the Ipopt
-  // library. See Ipopt installation. SetOption("linear_solver", "mumps");
+  // library. See Ipopt installation.
   SetOption("linear_solver", "ma27");
+  // SetOption("linear_solver", "mumps");
 
-  // Print levels.
+  // Output options.                            // [Debug]
+  SetOption("timing_statistics", "no");
   SetOption("print_timing_statistics", "no");
   SetOption("print_user_options", "no");
-  SetOption("print_level", 4);
+  SetOption("print_level", 0); // 0 - 12.
+  SetOption("sb", "yes"); // Suppresses copyright information.
+  SetOption("print_frequency_time", 1e-5);
 
-  // For debugging derivatives.
-  SetOption("derivative_test", "second-order");
+  // For debugging derivatives.                 // [Debug]
+  SetOption("derivative_test", "none"); // ("none", "second-order")
   SetOption("derivative_test_tol", 1e-3);
 
 #ifndef NDEBUG
   app_->RethrowNonIpoptException(true);
 #endif
+
+  Ipopt::ApplicationReturnStatus status = app_->Initialize();
+  if (status != Ipopt::Solve_Succeeded) {
+    std::runtime_error("*** Error during initialization!");
+  }
 }
 
 DistanceSolver::~DistanceSolver() {}
+
+bool DistanceSolver::MinimumDistance(Ipopt::SmartPtr<Ipopt::TNLP> prob_ptr) {
+  Ipopt::ApplicationReturnStatus status = app_->OptimizeTNLP(prob_ptr);
+
+  return (status == Ipopt::Solve_Succeeded);
+}
 
 void DistanceSolver::SetOption(const std::string& name,
                                const std::string& value) {
@@ -310,10 +348,6 @@ void DistanceSolver::SetOption(const std::string& name, int value) {
 
 void DistanceSolver::SetOption(const std::string& name, double value) {
   app_->Options()->SetNumericValue(name, value);
-}
-
-double DistanceSolver::GetTotalWallclockTime() {
-  return app_->Statistics()->TotalWallclockTime();
 }
 
 }  // namespace sccbf

@@ -1,8 +1,3 @@
-##
-# cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-# cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-
-
 ## CMake version
 cmake_minimum_required(VERSION 3.15)
 
@@ -12,7 +7,7 @@ option(BUILD_BENCHMARKS
   "Build benchmarks for solvers (only built if BUILD_TESTS is ON)"
   ON
 )
-option(BUILD_APPS "Build examples" OFF)
+option(BUILD_APPS "Build examples" ON)
 option(BUILD_DOCS "Add documentation" OFF)
 
 ## Project name and version
@@ -62,6 +57,7 @@ if (BUILD_TESTS)
 endif()
 
 if (BUILD_APPS)
+  add_subdirectory(apps)
 endif()
 
 if (BUILD_DOCS)

@@ -65,19 +65,15 @@ class ConvexSet {
   void CheckDimensions() const;
 };
 
-inline ConvexSet::ConvexSet(int nz, int nr, int nx, int ndx,
-                            double margin)
-    : x_(nx),
-      dx_(ndx),
-      derivatives_(nz, nr),
-      margin_(margin) {
+inline ConvexSet::ConvexSet(int nz, int nr, int nx, int ndx, double margin)
+    : x_(nx), dx_(ndx), derivatives_(nz, nr), margin_(margin) {
   x_ = VectorXd::Zero(nx);
   dx_ = VectorXd::Zero(ndx);
 }
 
 inline const Derivatives& ConvexSet::UpdateDerivatives(const VectorXd& z,
-                                                const VectorXd& y,
-                                                DerivativeFlags flag) {
+                                                       const VectorXd& y,
+                                                       DerivativeFlags flag) {
   return UpdateDerivatives(x_, dx_, z, y, flag);
 }
 
@@ -86,17 +82,15 @@ inline const Derivatives& ConvexSet::get_derivatives() const {
 }
 
 inline void ConvexSet::set_states(const VectorXd& x, const VectorXd& dx) {
+  assert(x.rows() == nx());
+  assert(dx.rows() == ndx());
   x_ = x;
   dx_ = dx;
 }
 
-inline const VectorXd& ConvexSet::x() {
-  return x_;
-}
+inline const VectorXd& ConvexSet::x() { return x_; }
 
-inline const VectorXd& ConvexSet::dx() {
-  return dx_;
-}
+inline const VectorXd& ConvexSet::dx() { return dx_; }
 
 inline double ConvexSet::get_safety_margin() const { return margin_; }
 
