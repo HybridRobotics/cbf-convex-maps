@@ -5,7 +5,6 @@
 #include <memory>
 #include <string>
 
-#include "sccbf/collision/collision_info.h"
 #include "sccbf/collision/collision_pair.h"
 #include "sccbf/collision/distance_solver.h"
 #include "sccbf/data_types.h"
@@ -13,6 +12,7 @@
 #include "sccbf/geometry/ellipsoid.h"
 #include "sccbf/geometry/polytope.h"
 #include "sccbf/math_utils/utils.h"
+#include "sccbf/solver_options.h"
 
 namespace {
 
@@ -77,7 +77,7 @@ struct KktError {
 
 KktError GetKktError(const std::shared_ptr<ConvexSet>& set_ptr1,
                      const std::shared_ptr<ConvexSet>& set_ptr2,
-                     const std::shared_ptr<CollisionInfo>& info_ptr,
+                     const std::shared_ptr<SolverOptions>& opt_ptr,
                      const VectorXd& z, const VectorXd& lambda, double dist2) {
   const int dim = set_ptr1->dim();
   assert(set_ptr2->dim() == dim);
@@ -89,7 +89,7 @@ KktError GetKktError(const std::shared_ptr<ConvexSet>& set_ptr1,
   VectorXd z2 = z.tail(nz2);
   VectorXd lambda1 = lambda.head(nr1);
   VectorXd lambda2 = lambda.tail(nr2);
-  MatrixXd M = info_ptr->M;
+  MatrixXd metric = opt_ptr->metric;
   MatrixXd P1 = set_ptr1->get_projection_matrix();
   MatrixXd P2 = set_ptr2->get_projection_matrix();
 
@@ -99,9 +99,9 @@ KktError GetKktError(const std::shared_ptr<ConvexSet>& set_ptr1,
 
   // KKT errors.
   VectorXd dual_inf_err(2 * dim);  // gradient condition.
-  dual_inf_err.head(dim) = 2 * P1.transpose() * M * (P1 * z1 - P2 * z2) +
+  dual_inf_err.head(dim) = 2 * P1.transpose() * metric * (P1 * z1 - P2 * z2) +
                            d1.f_z.transpose() * lambda1;
-  dual_inf_err.tail(dim) = 2 * P2.transpose() * M * (P2 * z2 - P1 * z1) +
+  dual_inf_err.tail(dim) = 2 * P2.transpose() * metric * (P2 * z2 - P1 * z1) +
                            d2.f_z.transpose() * lambda2;
   VectorXd prim_inf_err(nr1 + nr2);
   prim_inf_err.head(nr1) = d1.f.cwiseMax(0.0);
@@ -111,7 +111,7 @@ KktError GetKktError(const std::shared_ptr<ConvexSet>& set_ptr1,
   compl_slack_err.head(nr1) = lambda1.cwiseProduct(d1.f);
   compl_slack_err.tail(nr2) = lambda2.cwiseProduct(d2.f);
   double obj_err =
-      (P1 * z1 - P2 * z2).transpose() * M * (P1 * z1 - P2 * z2) - dist2;
+      (P1 * z1 - P2 * z2).transpose() * metric * (P1 * z1 - P2 * z2) - dist2;
   return KktError{dual_inf_err, prim_inf_err, dual_nonneg_err, compl_slack_err,
                   obj_err};
 }
@@ -173,7 +173,8 @@ class CollisionPairTest : public testing::TestWithParam<int> {
     MatrixXd metric(nz_, nz_);
     const double eps = 1.0;
     RandomSpdMatrix(metric, eps);
-    info_ptr_ = std::make_shared<CollisionInfo>(metric);
+    opt_ptr_ = std::make_shared<SolverOptions>(nz_);
+    opt_ptr_->metric = metric;
 
     polytope_ptr_ = GetRandomPolytope(nz_);
     ellipsoid_ptr_ = GetRandomEllipsoid(nz_);
@@ -184,7 +185,7 @@ class CollisionPairTest : public testing::TestWithParam<int> {
   int nz_;
   int nrp_, nre_;
   std::shared_ptr<DistanceSolver> solver_ptr_;
-  std::shared_ptr<CollisionInfo> info_ptr_;
+  std::shared_ptr<SolverOptions> opt_ptr_;
   std::shared_ptr<ConvexSet> polytope_ptr_;
   std::shared_ptr<ConvexSet> ellipsoid_ptr_;
 };
@@ -196,13 +197,12 @@ TEST_P(CollisionPairTest, DistanceOptimization) {
   SetRandomState(polytope_ptr_, translation);
   SetRandomState(ellipsoid_ptr_, VectorXd::Random(nz_));
 
-  auto cp =
-      CollisionPair(polytope_ptr_, ellipsoid_ptr_, info_ptr_, solver_ptr_);
+  auto cp = CollisionPair(polytope_ptr_, ellipsoid_ptr_, opt_ptr_, solver_ptr_);
   cp.MinimumDistance();
   VectorXd z(2 * nz_), lambda(nrp_ + nre_);
   double dist2 = cp.get_kkt_solution(z, lambda);
   KktError kkt_err =
-      GetKktError(polytope_ptr_, ellipsoid_ptr_, info_ptr_, z, lambda, dist2);
+      GetKktError(polytope_ptr_, ellipsoid_ptr_, opt_ptr_, z, lambda, dist2);
   EXPECT_PRED_FORMAT4(AssertKktError, kkt_err, z, lambda, 1e-5);
 }
 

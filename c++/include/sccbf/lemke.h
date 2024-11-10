@@ -7,16 +7,15 @@
 
 namespace sccbf {
 
-enum class LcpStatus : uint8_t {
-  kOptimal,
-  kInfeasible,
-  kMaxIterReached,
-};
+enum class LcpStatus : uint8_t;
+
+struct LcpOptions;
 
 // Solve: w = Mz + q, w >= 0, z >= 0, <w, z> = 0.
 // Uses "Murty, Katta G., and Feng-Tien Yu. Linear complementarity, linear and
 // nonlinear programming. Vol. 3. Berlin: Heldermann, 1988".
-LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z);
+LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z,
+                   const LcpOptions& opt);
 
 }  // namespace sccbf
 

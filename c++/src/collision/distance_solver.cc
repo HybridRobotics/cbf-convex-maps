@@ -8,11 +8,11 @@
 #include <cassert>
 #include <memory>
 
-#include "sccbf/collision/collision_info.h"
 #include "sccbf/collision/collision_pair.h"
 #include "sccbf/data_types.h"
 #include "sccbf/derivatives.h"
 #include "sccbf/geometry/convex_set.h"
+#include "sccbf/solver_options.h"
 
 namespace sccbf {
 
@@ -83,7 +83,7 @@ bool DistanceProblem::eval_f(Ipopt::Index /*n*/, const Ipopt::Number* x,
   const MatrixXd& P1 = cp_.C1_->get_projection_matrix();
   const MatrixXd& P2 = cp_.C2_->get_projection_matrix();
   const auto diff = P1 * z1 - P2 * z2;
-  obj_value = diff.transpose() * cp_.info_->M * diff;
+  obj_value = diff.transpose() * cp_.opt_->metric * diff;
 
   return true;
 }
@@ -97,7 +97,7 @@ bool DistanceProblem::eval_grad_f(Ipopt::Index n, const Ipopt::Number* x,
   Eigen::Map<const VectorXd> z2(x + nz1, nz2);
   const MatrixXd& P1 = cp_.C1_->get_projection_matrix();
   const MatrixXd& P2 = cp_.C2_->get_projection_matrix();
-  const auto diff = cp_.info_->M * (P1 * z1 - P2 * z2);
+  const auto diff = cp_.opt_->metric * (P1 * z1 - P2 * z2);
   const auto grad_z1 = 2 * P1.transpose() * diff;
   const auto grad_z2 = -2 * P2.transpose() * diff;
   for (int i = 0; i < nz1; ++i) {
@@ -236,10 +236,11 @@ bool DistanceProblem::eval_h(Ipopt::Index n, const Ipopt::Number* x,
 
     MatrixXd hess(n, n);
     const auto hess_11 =
-        2 * obj_factor * P1.transpose() * cp_.info_->M * P1 + d1.f_zz_y;
-    const auto hess_21 = -2 * obj_factor * P2.transpose() * cp_.info_->M * P1;
+        2 * obj_factor * P1.transpose() * cp_.opt_->metric * P1 + d1.f_zz_y;
+    const auto hess_21 =
+        -2 * obj_factor * P2.transpose() * cp_.opt_->metric * P1;
     const auto hess_22 =
-        2 * obj_factor * P2.transpose() * cp_.info_->M * P2 + d2.f_zz_y;
+        2 * obj_factor * P2.transpose() * cp_.opt_->metric * P2 + d2.f_zz_y;
     hess.topLeftCorner(nz1, nz1).triangularView<Eigen::Lower>() =
         hess_11.triangularView<Eigen::Lower>();
     hess.bottomLeftCorner(nz2, nz1) = hess_21;

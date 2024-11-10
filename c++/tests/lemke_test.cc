@@ -5,6 +5,7 @@
 #include <Eigen/Core>
 
 #include "sccbf/data_types.h"
+#include "sccbf/solver_options.h"
 
 namespace {
 
@@ -53,19 +54,26 @@ testing::AssertionResult AssertVectorEQ(const char* vec1_expr,
          << "are not equal";
 }
 
-TEST(LemkeTest, OneDimensionInfeasible) {
+class LemkeTest : public testing::Test {
+ protected:
+  LemkeTest() : opt_{} {};
+
+  LcpOptions opt_;
+};
+
+TEST_F(LemkeTest, OneDimensionInfeasible) {
   MatrixXd M(1, 1);
   M << 0;
   VectorXd q(1);
   q << -1;
   VectorXd z(1);
 
-  auto status = SolveLcp(M, q, z);
+  auto status = SolveLcp(M, q, z, opt_);
   ASSERT_EQ(status, LcpStatus::kInfeasible)
       << "Infeasible LCP returned a solution";
 }
 
-TEST(LemkeTest, OneDimensionOptimal) {
+TEST_F(LemkeTest, OneDimensionOptimal) {
   MatrixXd M(1, 1);
   M << 2;
   VectorXd q(1);
@@ -74,7 +82,7 @@ TEST(LemkeTest, OneDimensionOptimal) {
   VectorXd sol(1);
   sol << 0.5;
 
-  auto status = SolveLcp(M, q, z);
+  auto status = SolveLcp(M, q, z, opt_);
   ASSERT_EQ(status, LcpStatus::kOptimal) << "LCP not solved to optimality";
 
   VectorXd w = M * z + q;
@@ -86,33 +94,33 @@ TEST(LemkeTest, OneDimensionOptimal) {
 }
 
 // Example 2.2 in reference.
-TEST(LemkeTest, TwoDimensionOptimal) {
+TEST_F(LemkeTest, TwoDimensionOptimal) {
   MatrixXd M(2, 2);
   M << -2, 1, 1, -2;
   VectorXd q(2);
   q << -1, -1;
   VectorXd z(2);
 
-  auto status = SolveLcp(M, q, z);
+  auto status = SolveLcp(M, q, z, opt_);
   ASSERT_EQ(status, LcpStatus::kInfeasible)
       << "Infeasible LCP returned a solution";
 }
 
 // Example 2.9 in reference.
-TEST(LemkeTest, ThreeDimensionInfeasible) {
+TEST_F(LemkeTest, ThreeDimensionInfeasible) {
   MatrixXd M(3, 3);
   M << -1, 0, -3, 1, -2, -5, -2, -1, -2;
   VectorXd q(3);
   q << -3, -2, -1;
   VectorXd z(3);
 
-  auto status = SolveLcp(M, q, z);
+  auto status = SolveLcp(M, q, z, opt_);
   ASSERT_EQ(status, LcpStatus::kInfeasible)
       << "Infeasible LCP returned solution";
 }
 
 // Example 2.10 in reference.
-TEST(LemkeTest, ThreeDimensionOptimal) {
+TEST_F(LemkeTest, ThreeDimensionOptimal) {
   MatrixXd M(3, 3);
   M << 1, 0, 0, 2, 1, 0, 2, 2, 1;
   VectorXd q(3);
@@ -121,7 +129,7 @@ TEST(LemkeTest, ThreeDimensionOptimal) {
   VectorXd sol(3);
   sol << 8, 0, 0;
 
-  auto status = SolveLcp(M, q, z);
+  auto status = SolveLcp(M, q, z, opt_);
   ASSERT_EQ(status, LcpStatus::kOptimal) << "LCP not solved to optimality";
 
   VectorXd w = M * z + q;
@@ -134,7 +142,7 @@ TEST(LemkeTest, ThreeDimensionOptimal) {
 }
 
 // Example 2.8 in reference.
-TEST(LemkeTest, FourDimensionOptimal) {
+TEST_F(LemkeTest, FourDimensionOptimal) {
   MatrixXd M(4, 4);
   M << 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 2, 0, 1, 1, 0, 2;
   VectorXd q(4);
@@ -143,7 +151,7 @@ TEST(LemkeTest, FourDimensionOptimal) {
   VectorXd sol(4);
   sol << 2, 1, 3, 1;
 
-  auto status = SolveLcp(M, q, z);
+  auto status = SolveLcp(M, q, z, opt_);
   ASSERT_EQ(status, LcpStatus::kOptimal) << "LCP not solved to optimality";
 
   VectorXd w = M * z + q;
@@ -156,7 +164,7 @@ TEST(LemkeTest, FourDimensionOptimal) {
 }
 
 // Cycling example by M.M. Kostreva (1979).
-TEST(LemkeTest, CyclingExample) {
+TEST_F(LemkeTest, CyclingExample) {
   MatrixXd M(3, 3);
   M << 1, 2, 0, 0, 1, 2, 2, 0, 1;
   VectorXd q(3);
@@ -165,7 +173,7 @@ TEST(LemkeTest, CyclingExample) {
   VectorXd sol(3);
   sol << 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0;
 
-  auto status = SolveLcp(M, q, z);
+  auto status = SolveLcp(M, q, z, opt_);
   ASSERT_EQ(status, LcpStatus::kOptimal) << "LCP not solved to optimality";
 
   VectorXd w = M * z + q;

@@ -8,13 +8,11 @@
 #include <limits>
 
 #include "sccbf/data_types.h"
+#include "sccbf/solver_options.h"
 
 namespace sccbf {
 
 namespace {
-
-constexpr int kMaxLcpIter = 100;
-constexpr double kRatioTol = 1e-6;
 
 inline void PivotColumn(MatrixXd& tableau, int row, int col, int n) {
   tableau.row(row) /= tableau(row, col);
@@ -40,7 +38,8 @@ inline int LexicoMinimumIndex(const MatrixXd& tableau, int idx1, int idx2,
 
 }  // namespace
 
-LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
+LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z,
+                   const LcpOptions& opt) {
   const int n = static_cast<int>(M.rows());
   assert(M.cols() == n);
   assert(q.rows() == n);
@@ -59,7 +58,7 @@ LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
 
   // Initialization.
   min_ratio = tableau.col(q_idx).minCoeff(&exiting_idx);
-  if (min_ratio > -kRatioTol) {
+  if (min_ratio > -opt.ratio_tol) {
     z = Eigen::VectorXd::Zero(n);
     return LcpStatus::kOptimal;
   }
@@ -69,7 +68,7 @@ LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
   basic_vars(exiting_idx) = entering_idx;
   entering_idx = exiting_idx + n;
 
-  for (int iter = 0; iter < kMaxLcpIter; ++iter) {
+  for (int iter = 0; iter < opt.max_lcp_iter; ++iter) {
     // Find exiting index.
     min_ratio = std::numeric_limits<double>::infinity();
     exiting_idx = -1;
@@ -91,7 +90,7 @@ LcpStatus SolveLcp(const MatrixXd& M, const VectorXd& q, VectorXd& z) {
     for (int i = 0; i < n; ++i) {
       if ((i != exiting_idx) && (tableau(i, entering_idx) > 0)) {
         if (std::abs(tableau(i, q_idx) / tableau(i, entering_idx) - min_ratio) <
-            kRatioTol) {
+            opt.ratio_tol) {
           if (i == z0_idx) {
             exiting_idx_ = z0_idx;
             break;

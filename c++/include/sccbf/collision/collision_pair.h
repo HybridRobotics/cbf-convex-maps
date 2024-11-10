@@ -10,7 +10,7 @@ namespace sccbf {
 
 class ConvexSet;
 
-class CollisionInfo;
+class SolverOptions;
 class DistanceProblem;
 class DistanceSolver;
 
@@ -18,7 +18,7 @@ class CollisionPair {
  public:
   CollisionPair(const std::shared_ptr<ConvexSet>& C1,
                 const std::shared_ptr<ConvexSet>& C2,
-                const std::shared_ptr<CollisionInfo>& info,
+                const std::shared_ptr<SolverOptions>& opt,
                 const std::shared_ptr<DistanceSolver>& solver);
 
   ~CollisionPair();
@@ -36,7 +36,7 @@ class CollisionPair {
   const std::shared_ptr<ConvexSet> C1_;
   const std::shared_ptr<ConvexSet> C2_;
   // Collision information.
-  const std::shared_ptr<CollisionInfo> info_;
+  const std::shared_ptr<SolverOptions> opt_;
   // Ipopt minimum distance problem.
   Ipopt::SmartPtr<Ipopt::TNLP> prob_;
   const std::shared_ptr<DistanceSolver> solver_;
