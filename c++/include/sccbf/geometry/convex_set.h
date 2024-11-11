@@ -43,8 +43,8 @@ class ConvexSet {
   // compactness when needed).
   virtual MatrixXd get_projection_matrix() const = 0;
 
-  // Hessian sparsity pattern [unused].
-  virtual MatrixXd get_hessian_sparsity_matrix() const = 0;
+  // Center of convex set at state x.
+  virtual VectorXd get_center(const VectorXd& x) const = 0;
 
   virtual bool is_strongly_convex() const = 0;
 
@@ -53,6 +53,8 @@ class ConvexSet {
                                        DerivativeFlags flag);
 
   const Derivatives& get_derivatives() const;
+
+  VectorXd get_center() const;
 
   void set_states(const VectorXd& x, const VectorXd& dx);
 
@@ -79,6 +81,10 @@ inline const Derivatives& ConvexSet::UpdateDerivatives(const VectorXd& z,
 
 inline const Derivatives& ConvexSet::get_derivatives() const {
   return derivatives_;
+}
+
+inline VectorXd ConvexSet::get_center() const {
+  return get_center(x_);
 }
 
 inline void ConvexSet::set_states(const VectorXd& x, const VectorXd& dx) {
@@ -108,10 +114,6 @@ inline void ConvexSet::CheckDimensions() const {
   MatrixXd mat = get_projection_matrix();
   assert(mat.rows() == dim());
   assert(mat.cols() == nz());
-
-  MatrixXd hess = get_hessian_sparsity_matrix();
-  assert(hess.rows() == nz());
-  assert(hess.cols() == nz());
 
   assert(margin_ >= 0);
 }

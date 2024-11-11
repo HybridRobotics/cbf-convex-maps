@@ -25,13 +25,7 @@ struct SolverOptions {
   MatrixXd metric;
 
   LcpOptions lcp{};
-
-  SolverOptions(int nz);
 };
-
-inline SolverOptions::SolverOptions(int nz) {
-  metric = MatrixXd::Identity(nz, nz);
-}
 
 }  // namespace sccbf
 

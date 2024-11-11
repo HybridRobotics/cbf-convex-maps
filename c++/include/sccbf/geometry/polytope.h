@@ -46,7 +46,7 @@ class Polytope : public ConvexSet {
 
   MatrixXd get_projection_matrix() const override;
 
-  MatrixXd get_hessian_sparsity_matrix() const override;
+  VectorXd get_center(const VectorXd& x) const override;
 
   bool is_strongly_convex() const override;
 
@@ -89,6 +89,9 @@ Polytope<nz_>::Polytope(const MatrixXd& A, const VectorXd& b, double margin,
       A_.row(i).normalize();
       b_(i) = b_(i) / row_norm;
     }
+  }
+  if ((b.array() >= 0).any()) {
+    std::runtime_error("Origin is not in the interior of the poytope!");
   }
 
   strongly_convex_ = (sc_modulus >= kPolytopeScThreshold);
@@ -203,11 +206,9 @@ inline MatrixXd Polytope<nz_>::get_projection_matrix() const {
 }
 
 template <int nz_>
-inline MatrixXd Polytope<nz_>::get_hessian_sparsity_matrix() const {
-  if (strongly_convex_)
-    return MatrixXd::Identity(kNz, kNz);
-  else
-    return MatrixXd::Zero(kNz, kNz);
+inline VectorXd Polytope<nz_>::get_center(const VectorXd& x) const {
+  assert(x.rows() == kNx);
+  return x.head<kNz>();
 }
 
 template <int nz_>

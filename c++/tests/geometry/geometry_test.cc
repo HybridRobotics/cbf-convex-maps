@@ -220,7 +220,7 @@ TEST(GeometryTest, StaticEllipsoid3) {
 // Polytope test
 TEST(GeometryTest, Polytope2) {
   const int nr = 6;
-  VectorXd center = VectorXd::Random(2);
+  VectorXd center = VectorXd::Zero(2);
   MatrixXd A(nr, 2);
   VectorXd b(nr);
   const double in_radius = 1;
@@ -239,7 +239,7 @@ TEST(GeometryTest, Polytope2) {
 
 TEST(GeometryTest, Polytope3) {
   const int nr = 10;
-  VectorXd center = VectorXd::Random(3);
+  VectorXd center = VectorXd::Zero(3);
   MatrixXd A(nr, 3);
   VectorXd b(nr);
   const double in_radius = 3;
@@ -259,12 +259,11 @@ TEST(GeometryTest, Polytope3) {
 // StaticPolytope test
 TEST(GeometryTest, StaticPolytope2) {
   const int nr = 6;
-  VectorXd center = VectorXd::Random(2);
   VectorXd p = VectorXd::Random(2);
   MatrixXd A(nr, 2);
   VectorXd b(nr);
   const double in_radius = 1;
-  RandomPolytope(center, in_radius, A, b);
+  RandomPolytope(p, in_radius, A, b);
   const double sc_modulus = 1e-2;
   auto set = StaticPolytope2d(A, b, p, 0.0, sc_modulus, true);
   StateVariables var = RandomStaticStateVariables(set);
@@ -279,12 +278,11 @@ TEST(GeometryTest, StaticPolytope2) {
 
 TEST(GeometryTest, StaticHalfspace) {
   const int nr = 1;
-  VectorXd center = VectorXd::Random(3);
   VectorXd p = VectorXd::Random(3);
   MatrixXd A(nr, 3);
   VectorXd b(nr);
   const double in_radius = 3;
-  RandomPolytope(center, in_radius, A, b);
+  RandomPolytope(p, in_radius, A, b);
   const double sc_modulus = 0;
   auto set = StaticPolytope3d(A, b, p, 0.0, sc_modulus, true);
   StateVariables var = RandomStaticStateVariables(set);
@@ -299,12 +297,11 @@ TEST(GeometryTest, StaticHalfspace) {
 
 TEST(GeometryTest, StaticPolytope3) {
   const int nr = 10;
-  VectorXd center = VectorXd::Random(3);
   VectorXd p = VectorXd::Random(3);
   MatrixXd A(nr, 3);
   VectorXd b(nr);
   const double in_radius = 3;
-  RandomPolytope(center, in_radius, A, b);
+  RandomPolytope(p, in_radius, A, b);
   const double sc_modulus = 1e-2;
   auto set = StaticPolytope3d(A, b, p, 0.0, sc_modulus, true);
   StateVariables var = RandomStaticStateVariables(set);

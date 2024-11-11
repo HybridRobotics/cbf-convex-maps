@@ -173,7 +173,7 @@ class CollisionPairTest : public testing::TestWithParam<int> {
     MatrixXd metric(nz_, nz_);
     const double eps = 1.0;
     RandomSpdMatrix(metric, eps);
-    opt_ptr_ = std::make_shared<SolverOptions>(nz_);
+    opt_ptr_ = std::make_shared<SolverOptions>();
     opt_ptr_->metric = metric;
 
     polytope_ptr_ = GetRandomPolytope(nz_);

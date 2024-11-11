@@ -45,7 +45,7 @@ class StaticPolytope : public ConvexSet {
 
   MatrixXd get_projection_matrix() const override;
 
-  MatrixXd get_hessian_sparsity_matrix() const override;
+  VectorXd get_center(const VectorXd& x) const override;
 
   bool is_strongly_convex() const override;
 
@@ -89,6 +89,9 @@ StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A, const VectorXd& b,
       A_.row(i).normalize();
       b_(i) = b_(i) / row_norm;
     }
+  }
+  if (((A * p - b).array() >= 0).any()) {
+    std::runtime_error("p is not in the interior of the poytope!");
   }
 
   strongly_convex_ = (sc_modulus >= kStaticPolytopeScThreshold);
@@ -168,11 +171,9 @@ inline MatrixXd StaticPolytope<nz_>::get_projection_matrix() const {
 }
 
 template <int nz_>
-inline MatrixXd StaticPolytope<nz_>::get_hessian_sparsity_matrix() const {
-  if (strongly_convex_)
-    return MatrixXd::Identity(kNz, kNz);
-  else
-    return MatrixXd::Zero(kNz, kNz);
+inline VectorXd StaticPolytope<nz_>::get_center(const VectorXd& x) const {
+  assert(x.rows() == kNx);
+  return p_;
 }
 
 template <int nz_>

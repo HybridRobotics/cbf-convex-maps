@@ -38,7 +38,7 @@ class Ellipsoid : public ConvexSet {
 
   MatrixXd get_projection_matrix() const override;
 
-  MatrixXd get_hessian_sparsity_matrix() const override;
+  VectorXd get_center(const VectorXd& x) const override;
 
   bool is_strongly_convex() const override;
 
@@ -173,8 +173,9 @@ inline MatrixXd Ellipsoid<nz_>::get_projection_matrix() const {
 }
 
 template <int nz_>
-inline MatrixXd Ellipsoid<nz_>::get_hessian_sparsity_matrix() const {
-  return MatrixXd::Ones(kNz, kNz);
+inline VectorXd Ellipsoid<nz_>::get_center(const VectorXd& x) const {
+  assert(x.rows() == kNx);
+  return x.head<kNz>();
 }
 
 template <int nz_>
