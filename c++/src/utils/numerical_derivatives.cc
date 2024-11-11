@@ -1,4 +1,4 @@
-#include "sccbf/math_utils/numerical_derivatives.h"
+#include "sccbf/utils/numerical_derivatives.h"
 
 #include <cassert>
 #include <cmath>

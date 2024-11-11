@@ -9,8 +9,8 @@
 #include "sccbf/geometry/polytope.h"
 #include "sccbf/geometry/static_ellipsoid.h"
 #include "sccbf/geometry/static_polytope.h"
-#include "sccbf/math_utils/numerical_derivatives.h"
-#include "sccbf/math_utils/utils.h"
+#include "sccbf/utils/matrix_utils.h"
+#include "sccbf/utils/numerical_derivatives.h"
 
 namespace {
 
@@ -154,7 +154,7 @@ const DerivativeFlags kFlag = DerivativeFlags::f | DerivativeFlags::f_x |
 const double kDerivativeErrorTol = 1e-3;
 
 // Ellipsoid test
-TEST(GeometryTest, Ellipsoid2) {
+TEST(GeometryTest, Ellipsoid2d) {
   MatrixXd Q(2, 2);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -169,7 +169,7 @@ TEST(GeometryTest, Ellipsoid2) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, Ellipsoid3) {
+TEST(GeometryTest, Ellipsoid3d) {
   MatrixXd Q(3, 3);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -185,7 +185,7 @@ TEST(GeometryTest, Ellipsoid3) {
 }
 
 // StaticEllipsoid test
-TEST(GeometryTest, StaticEllipsoid2) {
+TEST(GeometryTest, StaticEllipsoid2d) {
   MatrixXd Q(2, 2);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -201,7 +201,7 @@ TEST(GeometryTest, StaticEllipsoid2) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, StaticEllipsoid3) {
+TEST(GeometryTest, StaticEllipsoid3d) {
   MatrixXd Q(3, 3);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -218,7 +218,7 @@ TEST(GeometryTest, StaticEllipsoid3) {
 }
 
 // Polytope test
-TEST(GeometryTest, Polytope2) {
+TEST(GeometryTest, Polytope2d) {
   const int nr = 6;
   VectorXd center = VectorXd::Zero(2);
   MatrixXd A(nr, 2);
@@ -237,7 +237,7 @@ TEST(GeometryTest, Polytope2) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, Polytope3) {
+TEST(GeometryTest, Polytope3d) {
   const int nr = 10;
   VectorXd center = VectorXd::Zero(3);
   MatrixXd A(nr, 3);
@@ -257,7 +257,7 @@ TEST(GeometryTest, Polytope3) {
 }
 
 // StaticPolytope test
-TEST(GeometryTest, StaticPolytope2) {
+TEST(GeometryTest, StaticPolytope2d) {
   const int nr = 6;
   VectorXd p = VectorXd::Random(2);
   MatrixXd A(nr, 2);
@@ -295,7 +295,7 @@ TEST(GeometryTest, StaticHalfspace) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, StaticPolytope3) {
+TEST(GeometryTest, StaticPolytope3d) {
   const int nr = 10;
   VectorXd p = VectorXd::Random(3);
   MatrixXd A(nr, 3);

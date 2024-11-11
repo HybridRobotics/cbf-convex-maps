@@ -45,25 +45,6 @@ inline void HatMap(const VectorXd& vec, MatrixXd& vec_hat) {
     HatMap<3>(vec, vec_hat);
 }
 
-// Implementation from "P. Blanchard, D. J. Higham, and N. J. Higham.
-// [[https://doi.org/10.1093/imanum/draa038][Computing the Log-Sum-Exp and
-// Softmax Functions]]. IMA J. Numer. Anal., Advance access, 2020."
-template <typename Derived>
-inline double LogSumExp(const Eigen::MatrixBase<Derived>& vec,
-                        VectorXd& softmax) {
-  assert(vec.size() == softmax.size());
-
-  Eigen::Index max_idx{};
-  const double max_value = vec.maxCoeff(&max_idx);
-  softmax.array() = (vec.array() - max_value).exp();
-  softmax(max_idx) = 0;
-  const double sum = softmax.sum();
-  const double lse = max_value + std::log1p(sum);
-  softmax(max_idx) = 1;
-  softmax = softmax / (1 + sum);
-  return lse;
-}
-
 inline void EulerToRotation(double angle_x, double angle_y, double angle_z,
                             MatrixXd& rotation) {
   assert((rotation.rows() == 3) && (rotation.cols() == 3));
@@ -108,6 +89,80 @@ inline void RandomRotation(MatrixXd& rotation) {
     RandomRotation<3>(rotation);
 }
 
+inline void IntegrateSo2(const MatrixXd& rot, double ang_vel,
+                         MatrixXd& rot_new) {
+  assert((rot.rows() == 2) && (rot.cols() == 2));
+  assert((rot_new.rows() == 2) && (rot_new.cols() == 2));
+  const double ang = std::atan2(rot(1, 0), rot(0, 0)) + ang_vel;
+  rot_new << std::cos(ang), -std::sin(ang), std::sin(ang), std::cos(ang);
+}
+
+inline void ProjectSo3(MatrixXd& rot) {
+  rot.col(0).normalize();
+  rot.col(1) = rot.col(1) - rot.col(0) * rot.col(0).dot(rot.col(1));
+  rot.col(1).normalize();
+  rot.col(2) = rot.col(2) - rot.col(0) * rot.col(0).dot(rot.col(2)) -
+               rot.col(1) * rot.col(1).dot(rot.col(2));
+  rot.col(2).normalize();
+}
+
+inline void IntegrateSo3(const MatrixXd& rot, const VectorXd& ang_vel,
+                         MatrixXd& rot_new) {
+  assert(ang_vel.rows() == 3);
+  assert((rot.rows() == 3) && (rot.cols() == 3));
+  assert((rot_new.rows() == 3) && (rot_new.cols() == 3));
+
+  const double theta = ang_vel.norm();
+  if (theta <= 1e-9) {
+    rot_new = rot;
+    return;
+  }
+  const auto dir = ang_vel.normalized();
+  MatrixXd hat = MatrixXd::Zero(3, 3);
+  HatMap(dir, hat);
+  MatrixXd rot_delta = MatrixXd::Identity(3, 3) + std::sin(theta) * hat +
+                       (1 - std::cos(theta)) * hat * hat;
+  // ProjectSo3(rot_delta);
+  rot_new = rot * rot_delta;
+  ProjectSo3(rot_new);
+}
+
+inline void IntegrateSo(const MatrixXd& rot, const VectorXd& ang_vel,
+                        MatrixXd& rot_new) {
+  const int n = static_cast<int>(ang_vel.rows());
+  assert((n == 1) || (n == 3));
+  if (n == 1)
+    return IntegrateSo2(rot, ang_vel(0), rot_new);
+  else
+    return IntegrateSo3(rot, ang_vel, rot_new);
+}
+
+// Implementation from "P. Blanchard, D. J. Higham, and N. J. Higham.
+// [[https://doi.org/10.1093/imanum/draa038][Computing the Log-Sum-Exp and
+// Softmax Functions]]. IMA J. Numer. Anal., Advance access, 2020."
+template <typename Derived>
+inline double LogSumExp(const Eigen::MatrixBase<Derived>& vec,
+                        VectorXd& softmax) {
+  assert(vec.size() == softmax.size());
+
+  Eigen::Index max_idx{};
+  const double max_value = vec.maxCoeff(&max_idx);
+  softmax.array() = (vec.array() - max_value).exp();
+  softmax(max_idx) = 0;
+  const double sum = softmax.sum();
+  const double lse = max_value + std::log1p(sum);
+  softmax(max_idx) = 1;
+  softmax = softmax / (1 + sum);
+  return lse;
+}
+
+template <typename Derived>
+inline bool IsPositiveDefinite(const Eigen::MatrixBase<Derived>& mat) {
+  assert(mat.rows() == mat.cols());
+  const Eigen::LDLT<MatrixXd> ldlt(mat);
+  return (ldlt.info() != Eigen::NumericalIssue) && ldlt.isPositive();
+}
+
 inline void RandomSpdMatrix(MatrixXd& mat, const double eps) {
   const int n = static_cast<int>(mat.rows());
   assert(mat.cols() == n);
@@ -132,13 +187,6 @@ inline void RandomPolytope(const VectorXd& c, double in_radius, MatrixXd& A,
     b(i) = normal.transpose() * c + in_radius;
     ++i;
   }
-}
-
-template <typename Derived>
-inline bool IsPositiveDefinite(const Eigen::MatrixBase<Derived>& mat) {
-  assert(mat.rows() == mat.cols());
-  const Eigen::LDLT<MatrixXd> ldlt(mat);
-  return (ldlt.info() != Eigen::NumericalIssue) && ldlt.isPositive();
 }
 
 }  // namespace sccbf

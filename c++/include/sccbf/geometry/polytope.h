@@ -9,7 +9,7 @@
 #include "sccbf/data_types.h"
 #include "sccbf/derivatives.h"
 #include "sccbf/geometry/convex_set.h"
-#include "sccbf/math_utils/utils.h"
+#include "sccbf/utils/matrix_utils.h"
 
 namespace sccbf {
 

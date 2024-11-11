@@ -7,7 +7,7 @@ find_package(IPOPT 3.11.9 REQUIRED)
 
 add_library(${LIB_CORE}
   "${PROJECT_SOURCE_DIR}/src/lemke.cc"
-  "${PROJECT_SOURCE_DIR}/src/math_utils/numerical_derivatives.cc"
+  "${PROJECT_SOURCE_DIR}/src/utils/numerical_derivatives.cc"
   "${PROJECT_SOURCE_DIR}/src/collision/distance_solver.cc"
   "${PROJECT_SOURCE_DIR}/src/collision/collision_pair.cc"
 )

@@ -5,7 +5,7 @@
 #include <random>
 
 #include "sccbf/data_types.h"
-#include "sccbf/math_utils/utils.h"
+#include "sccbf/utils/matrix_utils.h"
 
 namespace {
 
@@ -29,7 +29,7 @@ testing::AssertionResult AssertMatrixEQ(const char* mat1_expr,
          << "are not equal";
 }
 
-TEST(MatrixFunctionTest, HatMap2) {
+TEST(MatrixFunctionTest, HatMap2d) {
   VectorXd vec(1);
   vec << 1;
   MatrixXd hat(2, 2);
@@ -41,7 +41,7 @@ TEST(MatrixFunctionTest, HatMap2) {
   EXPECT_PRED_FORMAT3(AssertMatrixEQ, hat, sol, 1e-9);
 }
 
-TEST(MatrixFunctionTest, HatMap3) {
+TEST(MatrixFunctionTest, HatMap3d) {
   VectorXd vec(3);
   vec << 1, 2, 3;
   MatrixXd hat(3, 3);
@@ -53,7 +53,7 @@ TEST(MatrixFunctionTest, HatMap3) {
   EXPECT_PRED_FORMAT3(AssertMatrixEQ, hat, sol, 1e-9);
 }
 
-TEST(MatrixFunctionTest, EulerToRotationMatrix) {
+TEST(MatrixFunctionTest, EulerToRotation) {
   // Set random generator.
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -71,7 +71,7 @@ TEST(MatrixFunctionTest, EulerToRotationMatrix) {
   EXPECT_NEAR(rotation.determinant(), 1, 1e-6);
 }
 
-TEST(MatrixFunctionTest, RandomRotation2) {
+TEST(MatrixFunctionTest, RandomRotation2d) {
   MatrixXd rotation(2, 2);
   RandomRotation<2>(rotation);
 
@@ -79,12 +79,67 @@ TEST(MatrixFunctionTest, RandomRotation2) {
   EXPECT_NEAR(rotation.determinant(), 1, 1e-6);
 }
 
-TEST(MatrixFunctionTest, RandomRotation3) {
+TEST(MatrixFunctionTest, RandomRotation3d) {
   MatrixXd rotation(3, 3);
   RandomRotation<3>(rotation);
 
   EXPECT_TRUE(rotation.isUnitary());
   EXPECT_NEAR(rotation.determinant(), 1, 1e-6);
+}
+
+TEST(MatrixFunctionTest, IntegrateSo2) {
+  const double kPi = static_cast<double>(EIGEN_PI);
+  MatrixXd rot = MatrixXd::Identity(2, 2);
+
+  const double ang1 = kPi / 3;
+  MatrixXd sol1(2, 2);
+  sol1 << std::cos(ang1), -std::sin(ang1), std::sin(ang1), std::cos(ang1);
+  IntegrateSo2(rot, ang1, rot);
+  EXPECT_TRUE(rot.isUnitary());
+  EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, rot, sol1, 1e-5);
+
+  const double ang2 = kPi / 9;
+  MatrixXd sol2(2, 2);
+  sol2 << std::cos(ang2), -std::sin(ang2), std::sin(ang2), std::cos(ang2);
+  sol2 = sol1 * sol2;
+  IntegrateSo2(rot, ang2, rot);
+  EXPECT_TRUE(rot.isUnitary());
+  EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, rot, sol2, 1e-5);
+}
+
+TEST(MatrixFunctionTest, IntegrateSo3) {
+  const double kPi = static_cast<double>(EIGEN_PI);
+  MatrixXd rot = MatrixXd::Identity(3, 3);
+
+  VectorXd yaw(3);
+  yaw << 0, 0, kPi / 3;
+  MatrixXd sol1(3, 3);
+  EulerToRotation(0, 0, yaw(2), sol1);
+  IntegrateSo3(rot, yaw, rot);
+  EXPECT_TRUE(rot.isUnitary());
+  EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, rot, sol1, 1e-5);
+
+  VectorXd pitch(3);
+  pitch << 0, kPi / 4, 0;
+  MatrixXd sol2(3, 3);
+  EulerToRotation(0, pitch(1), yaw(2), sol2);
+  IntegrateSo3(rot, pitch, rot);
+  EXPECT_TRUE(rot.isUnitary());
+  EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, rot, sol2, 1e-5);
+
+  VectorXd roll(3);
+  roll << kPi / 6, 0, 0;
+  MatrixXd sol3(3, 3);
+  EulerToRotation(roll(0), roll(1), roll(2), sol3);
+  sol3 = sol2 * sol3;
+  IntegrateSo3(rot, roll, rot);
+  EXPECT_TRUE(rot.isUnitary());
+  EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, rot, sol3, 1e-5);
 }
 
 TEST(MatrixFunctionTest, IsPositiveDefinite) {
@@ -106,6 +161,15 @@ TEST(MatrixFunctionTest, IsPositiveDefinite) {
 
     EXPECT_TRUE(IsPositiveDefinite(mat));
   }
+}
+
+TEST(MatrixFunctionsTest, RandomSpdMatrix) {
+  const int n = 5;
+  MatrixXd mat(n, n);
+  const double eps = 1e-2;
+  RandomSpdMatrix(mat, eps);
+
+  EXPECT_TRUE(IsPositiveDefinite(mat));
 }
 
 }  // namespace

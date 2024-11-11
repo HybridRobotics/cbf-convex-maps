@@ -83,9 +83,7 @@ inline const Derivatives& ConvexSet::get_derivatives() const {
   return derivatives_;
 }
 
-inline VectorXd ConvexSet::get_center() const {
-  return get_center(x_);
-}
+inline VectorXd ConvexSet::get_center() const { return get_center(x_); }
 
 inline void ConvexSet::set_states(const VectorXd& x, const VectorXd& dx) {
   assert(x.rows() == nx());

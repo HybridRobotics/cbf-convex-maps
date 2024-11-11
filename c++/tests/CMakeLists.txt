@@ -11,9 +11,9 @@ FetchContent_MakeAvailable(googletest)
 ## Add test executables
 set(LIB_TEST_SOURCES
   "${PROJECT_SOURCE_DIR}/tests/lemke_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/math_utils/logsumexp_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/math_utils/matrixfunctions_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/math_utils/numericalgradient_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/utils/logsumexp_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/utils/matrixfunctions_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/utils/numericalgradient_test.cc"
   "${PROJECT_SOURCE_DIR}/tests/geometry/geometry_test.cc"
   "${PROJECT_SOURCE_DIR}/tests/collision/distance_test.cc"
 )
