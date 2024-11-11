@@ -62,12 +62,12 @@ bool DistanceProblem::get_starting_point(Ipopt::Index n, bool init_x,
                                          Ipopt::Number* lambda) {
   if (init_x) {
     for (int i = 0; i < n; ++i) {
-      x[i] = cp_.z_(i);
+      x[i] = cp_.z_opt_(i);
     }
   }
   if (init_lambda) {
     for (int i = 0; i < m; ++i) {
-      lambda[i] = cp_.lambda_(i);
+      lambda[i] = cp_.lambda_opt_(i);
     }
   }
 
@@ -270,10 +270,10 @@ void DistanceProblem::finalize_solution(
       (status == Ipopt::CPUTIME_EXCEEDED) ||
       (status == Ipopt::STOP_AT_ACCEPTABLE_POINT)) {
     Eigen::Map<const VectorXd> z_opt(x, n);
-    cp_.z_ = z_opt;
+    cp_.z_opt_ = z_opt;
     Eigen::Map<const VectorXd> lambda_opt(lambda, m);
-    cp_.lambda_ = lambda_opt;
-    cp_.dist2_ = obj_value;
+    cp_.lambda_opt_ = lambda_opt;
+    cp_.dist2_opt_ = obj_value;
   }
 }
 

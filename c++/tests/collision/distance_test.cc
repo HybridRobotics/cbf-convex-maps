@@ -11,8 +11,8 @@
 #include "sccbf/geometry/convex_set.h"
 #include "sccbf/geometry/ellipsoid.h"
 #include "sccbf/geometry/polytope.h"
-#include "sccbf/math_utils/utils.h"
 #include "sccbf/solver_options.h"
+#include "sccbf/utils/matrix_utils.h"
 
 namespace {
 
@@ -65,55 +65,25 @@ inline void SetRandomState(std::shared_ptr<ConvexSet>& set_ptr,
 }
 
 // Assertion function
-const DerivativeFlags kFlag = DerivativeFlags::f | DerivativeFlags::f_z;
-
 struct KktError {
   VectorXd dual_inf_err;
   VectorXd prim_inf_err;
-  VectorXd dual_nonneg_err;
-  VectorXd compl_slack_err;
+  VectorXd compl_err;
   double obj_err;
 };
 
-KktError GetKktError(const std::shared_ptr<ConvexSet>& set_ptr1,
-                     const std::shared_ptr<ConvexSet>& set_ptr2,
-                     const std::shared_ptr<SolverOptions>& opt_ptr,
-                     const VectorXd& z, const VectorXd& lambda, double dist2) {
-  const int dim = set_ptr1->dim();
-  assert(set_ptr2->dim() == dim);
-  const int nz1 = set_ptr1->nz();
-  const int nz2 = set_ptr2->nz();
-  const int nr1 = set_ptr1->nr();
-  const int nr2 = set_ptr2->nr();
-  VectorXd z1 = z.head(nz1);
-  VectorXd z2 = z.tail(nz2);
-  VectorXd lambda1 = lambda.head(nr1);
-  VectorXd lambda2 = lambda.tail(nr2);
-  MatrixXd metric = opt_ptr->metric;
-  MatrixXd P1 = set_ptr1->get_projection_matrix();
-  MatrixXd P2 = set_ptr2->get_projection_matrix();
-
-  // Update derivatives.
-  const Derivatives& d1 = set_ptr1->UpdateDerivatives(z1, lambda1, kFlag);
-  const Derivatives& d2 = set_ptr2->UpdateDerivatives(z2, lambda2, kFlag);
+KktError GetKktError(const std::shared_ptr<CollisionPair>& cp_ptr) {
+  const auto C1_ptr = cp_ptr->get_set1();
+  const auto C2_ptr = cp_ptr->get_set2();
+  const int nz = C1_ptr->nz() + C2_ptr->nz();
+  const int nr = C1_ptr->nr() + C2_ptr->nr();
 
   // KKT errors.
-  VectorXd dual_inf_err(2 * dim);  // gradient condition.
-  dual_inf_err.head(dim) = 2 * P1.transpose() * metric * (P1 * z1 - P2 * z2) +
-                           d1.f_z.transpose() * lambda1;
-  dual_inf_err.tail(dim) = 2 * P2.transpose() * metric * (P2 * z2 - P1 * z1) +
-                           d2.f_z.transpose() * lambda2;
-  VectorXd prim_inf_err(nr1 + nr2);
-  prim_inf_err.head(nr1) = d1.f.cwiseMax(0.0);
-  prim_inf_err.tail(nr2) = d2.f.cwiseMax(0.0);
-  VectorXd dual_nonneg_err = (-lambda).cwiseMax(0.0);
-  VectorXd compl_slack_err(nr1 + nr2);
-  compl_slack_err.head(nr1) = lambda1.cwiseProduct(d1.f);
-  compl_slack_err.tail(nr2) = lambda2.cwiseProduct(d2.f);
-  double obj_err =
-      (P1 * z1 - P2 * z2).transpose() * metric * (P1 * z1 - P2 * z2) - dist2;
-  return KktError{dual_inf_err, prim_inf_err, dual_nonneg_err, compl_slack_err,
-                  obj_err};
+  VectorXd dual_inf_err(nz);  // gradient condition.
+  VectorXd prim_inf_err(nr);
+  VectorXd compl_err(nr);
+  double obj_err = cp_ptr->KktError(dual_inf_err, prim_inf_err, compl_err);
+  return KktError{dual_inf_err, prim_inf_err, compl_err, obj_err};
 }
 
 Eigen::IOFormat kVecFmt(4, Eigen::DontAlignCols, ", ", "\n", "[", "]");
@@ -139,15 +109,10 @@ testing::AssertionResult AssertKktError(const char* /*kkt_err_expr*/,
     failure << "Primal infeasibility error = " << std::endl
             << kkt_err.prim_inf_err.transpose().format(kVecFmt) << std::endl;
   }
-  if (kkt_err.dual_nonneg_err.lpNorm<Eigen::Infinity>() >= tol) {
-    success = false;
-    failure << "Dual vector = " << std::endl
-            << lambda.transpose().format(kVecFmt) << std::endl;
-  }
-  if (kkt_err.compl_slack_err.lpNorm<Eigen::Infinity>() >= tol) {
+  if (kkt_err.compl_err.lpNorm<Eigen::Infinity>() >= tol) {
     success = false;
     failure << "Complementary slackness (inner product) = " << std::endl
-            << kkt_err.compl_slack_err.transpose().format(kVecFmt) << std::endl;
+            << kkt_err.compl_err.transpose().format(kVecFmt) << std::endl;
   }
   if (std::abs(kkt_err.obj_err) >= tol) {
     success = false;
@@ -190,19 +155,19 @@ class CollisionPairTest : public testing::TestWithParam<int> {
   std::shared_ptr<ConvexSet> ellipsoid_ptr_;
 };
 
-TEST_P(CollisionPairTest, DistanceOptimization) {
+TEST_P(CollisionPairTest, MinimumDistance) {
   VectorXd translation = 10.0 * VectorXd::Ones(nz_) + VectorXd::Random(nz_);
 
   // Polytope-Ellipsoid distance.
   SetRandomState(polytope_ptr_, translation);
   SetRandomState(ellipsoid_ptr_, VectorXd::Random(nz_));
 
-  auto cp = CollisionPair(polytope_ptr_, ellipsoid_ptr_, opt_ptr_, solver_ptr_);
-  cp.MinimumDistance();
+  auto cp = std::make_shared<CollisionPair>(polytope_ptr_, ellipsoid_ptr_,
+                                            opt_ptr_, solver_ptr_);
+  cp->MinimumDistance();
   VectorXd z(2 * nz_), lambda(nrp_ + nre_);
-  double dist2 = cp.get_kkt_solution(z, lambda);
-  KktError kkt_err =
-      GetKktError(polytope_ptr_, ellipsoid_ptr_, opt_ptr_, z, lambda, dist2);
+  cp->get_kkt_solution(z, lambda);
+  KktError kkt_err = GetKktError(cp);
   EXPECT_PRED_FORMAT4(AssertKktError, kkt_err, z, lambda, 1e-5);
 }
 
