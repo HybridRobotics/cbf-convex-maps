@@ -5,11 +5,31 @@ find_package(IPOPT 3.11.9 REQUIRED)
 # https://bugs.launchpad.net/ubuntu/+source/coinor-ipopt/+bug/1167585
 
 
-add_library(${LIB_CORE}
-  "${PROJECT_SOURCE_DIR}/src/lemke.cc"
-  "${PROJECT_SOURCE_DIR}/src/utils/numerical_derivatives.cc"
+set(LIB_CORE_SOURCES_COLLISION
   "${PROJECT_SOURCE_DIR}/src/collision/distance_solver.cc"
   "${PROJECT_SOURCE_DIR}/src/collision/collision_pair.cc"
+)
+
+set(LIB_CORE_SOURCES_GEOMETRY
+  "${PROJECT_SOURCE_DIR}/src/geometry/ellipsoid.cc"
+  "${PROJECT_SOURCE_DIR}/src/geometry/polytope.cc"
+  "${PROJECT_SOURCE_DIR}/src/geometry/static_ellipsoid.cc"
+  "${PROJECT_SOURCE_DIR}/src/geometry/static_polytope.cc"
+)
+
+set(LIB_CORE_SOURCES_UTILS
+  "${PROJECT_SOURCE_DIR}/src/utils/numerical_derivatives.cc"
+)
+
+set(LIB_CORE_SOURCES_OTHERS
+  "${PROJECT_SOURCE_DIR}/src/lemke.cc"
+)
+
+add_library(${LIB_CORE}
+  ${LIB_CORE_SOURCES_COLLISION}
+  ${LIB_CORE_SOURCES_GEOMETRY}
+  ${LIB_CORE_SOURCES_UTILS}
+  ${LIB_CORE_SOURCES_OTHERS}
 )
 
 target_include_directories(${LIB_CORE}

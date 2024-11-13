@@ -1,9 +1,9 @@
 #include "sccbf/collision/collision_pair.h"
 
 #include <Eigen/Geometry>
+#include <cmath>
 #include <memory>
 #include <vector>
-#include <cmath>
 
 #include "sccbf/collision/distance_solver.h"
 #include "sccbf/geometry/convex_set.h"
