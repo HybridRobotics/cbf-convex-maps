@@ -38,8 +38,6 @@ class StaticEllipsoid : public ConvexSet {
 
   MatrixXd get_projection_matrix() const override;
 
-  VectorXd get_center(const VectorXd& x) const override;
-
   bool is_strongly_convex() const override;
 
  private:
@@ -88,8 +86,10 @@ inline const Derivatives& StaticEllipsoid<nz_>::UpdateDerivatives(
   if (has_flag(flag, DerivativeFlags::f_z)) {
     derivatives_.f_z = 2 * (z - p_).transpose() * Q_;
   }
-  if (has_flag(flag, DerivativeFlags::f_zz_y)) {
+  if (has_flag(flag, DerivativeFlags::f_zz_y) ||
+      has_flag(flag, DerivativeFlags::f_zz_y_lb)) {
     derivatives_.f_zz_y = 2 * y(0) * Q_;
+    derivatives_.f_zz_y_lb = derivatives_.f_zz_y;
   }
   return derivatives_;
 }
@@ -138,12 +138,6 @@ inline int StaticEllipsoid<nz_>::ndx() const {
 template <int nz_>
 inline MatrixXd StaticEllipsoid<nz_>::get_projection_matrix() const {
   return MatrixXd::Identity(kNz, kNz);
-}
-
-template <int nz_>
-inline VectorXd StaticEllipsoid<nz_>::get_center(const VectorXd& x) const {
-  assert(x.rows() == kNx);
-  return p_;
 }
 
 template <int nz_>

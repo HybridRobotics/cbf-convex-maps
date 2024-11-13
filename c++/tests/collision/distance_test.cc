@@ -47,21 +47,21 @@ std::shared_ptr<ConvexSet> GetRandomEllipsoid(int nz) {
     return std::make_shared<Ellipsoid<3>>(Q, margin);
 }
 
-inline void SetRandomState(std::shared_ptr<ConvexSet>& set_ptr,
+inline void SetRandomState(std::shared_ptr<ConvexSet>& set,
                            const VectorXd& pos) {
-  const int nz = set_ptr->nz();
-  const int nx = set_ptr->nx();
+  const int nz = set->nz();
+  const int nx = set->nx();
   assert((nz == 2 && nx == 6) || (nz == 3 && nx == 12));
   assert(pos.rows() == nz);
 
   MatrixXd rotation(nz, nz);
   RandomRotation(rotation);
-  const VectorXd& x = set_ptr->x();
-  const VectorXd& dx = set_ptr->dx();
+  const VectorXd& x = set->x();
+  const VectorXd& dx = set->dx();
   VectorXd x_new(x.rows());
   x_new.head(nz) = pos;
   x_new.tail(nz * nz) = rotation.reshaped(nz * nz, 1);
-  set_ptr->set_states(x_new, dx);
+  set->set_states(x_new, dx);
 }
 
 // Assertion function
@@ -72,17 +72,17 @@ struct KktError {
   double obj_err;
 };
 
-KktError GetKktError(const std::shared_ptr<CollisionPair>& cp_ptr) {
-  const auto C1_ptr = cp_ptr->get_set1();
-  const auto C2_ptr = cp_ptr->get_set2();
-  const int nz = C1_ptr->nz() + C2_ptr->nz();
-  const int nr = C1_ptr->nr() + C2_ptr->nr();
+KktError GetKktError(const std::shared_ptr<CollisionPair>& cp) {
+  const auto C1 = cp->get_set1();
+  const auto C2 = cp->get_set2();
+  const int nz = C1->nz() + C2->nz();
+  const int nr = C1->nr() + C2->nr();
 
   // KKT errors.
   VectorXd dual_inf_err(nz);  // gradient condition.
   VectorXd prim_inf_err(nr);
   VectorXd compl_err(nr);
-  double obj_err = cp_ptr->KktError(dual_inf_err, prim_inf_err, compl_err);
+  double obj_err = cp->KktError(dual_inf_err, prim_inf_err, compl_err);
   return KktError{dual_inf_err, prim_inf_err, compl_err, obj_err};
 }
 
@@ -134,36 +134,36 @@ class CollisionPairTest : public testing::TestWithParam<int> {
  protected:
   CollisionPairTest() {
     nz_ = GetParam();
-    solver_ptr_ = std::make_shared<DistanceSolver>();
+    solver_ = std::make_shared<DistanceSolver>();
     MatrixXd metric(nz_, nz_);
     const double eps = 1.0;
     RandomSpdMatrix(metric, eps);
-    opt_ptr_ = std::make_shared<SolverOptions>();
-    opt_ptr_->metric = metric;
+    opt_ = std::make_shared<SolverOptions>();
+    opt_->metric = metric;
 
-    polytope_ptr_ = GetRandomPolytope(nz_);
-    ellipsoid_ptr_ = GetRandomEllipsoid(nz_);
-    nrp_ = polytope_ptr_->nr();
-    nre_ = ellipsoid_ptr_->nr();
+    polytope_ = GetRandomPolytope(nz_);
+    ellipsoid_ = GetRandomEllipsoid(nz_);
+    nrp_ = polytope_->nr();
+    nre_ = ellipsoid_->nr();
   }
 
   int nz_;
   int nrp_, nre_;
-  std::shared_ptr<DistanceSolver> solver_ptr_;
-  std::shared_ptr<SolverOptions> opt_ptr_;
-  std::shared_ptr<ConvexSet> polytope_ptr_;
-  std::shared_ptr<ConvexSet> ellipsoid_ptr_;
+  std::shared_ptr<DistanceSolver> solver_;
+  std::shared_ptr<SolverOptions> opt_;
+  std::shared_ptr<ConvexSet> polytope_;
+  std::shared_ptr<ConvexSet> ellipsoid_;
 };
 
 TEST_P(CollisionPairTest, MinimumDistance) {
   VectorXd translation = 10.0 * VectorXd::Ones(nz_) + VectorXd::Random(nz_);
 
   // Polytope-Ellipsoid distance.
-  SetRandomState(polytope_ptr_, translation);
-  SetRandomState(ellipsoid_ptr_, VectorXd::Random(nz_));
+  SetRandomState(polytope_, translation);
+  SetRandomState(ellipsoid_, VectorXd::Random(nz_));
 
-  auto cp = std::make_shared<CollisionPair>(polytope_ptr_, ellipsoid_ptr_,
-                                            opt_ptr_, solver_ptr_);
+  auto cp =
+      std::make_shared<CollisionPair>(polytope_, ellipsoid_, opt_, solver_);
   cp->MinimumDistance();
   VectorXd z(2 * nz_), lambda(nrp_ + nre_);
   cp->get_kkt_solution(z, lambda);

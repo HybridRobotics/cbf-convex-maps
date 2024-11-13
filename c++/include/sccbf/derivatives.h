@@ -15,6 +15,7 @@ struct Derivatives {
   MatrixXd f_z;
   VectorXd f_xz_y;
   MatrixXd f_zz_y;
+  MatrixXd f_zz_y_lb;
 
   Derivatives(int nz, int nr);
 
@@ -23,12 +24,18 @@ struct Derivatives {
 };
 
 inline Derivatives::Derivatives(int nz, int nr)
-    : f(nr), f_x(nr), f_z(nr, nz), f_xz_y(nz), f_zz_y(nz, nz) {
+    : f(nr),
+      f_x(nr),
+      f_z(nr, nz),
+      f_xz_y(nz),
+      f_zz_y(nz, nz),
+      f_zz_y_lb(nz, nz) {
   f = VectorXd::Zero(nr);
   f_x = VectorXd::Zero(nr);
   f_z = MatrixXd::Zero(nr, nz);
   f_xz_y = VectorXd::Zero(nz);
   f_zz_y = MatrixXd::Zero(nz, nz);
+  f_zz_y_lb = MatrixXd::Zero(nz, nz);
 }
 
 inline Derivatives::Derivatives(const VectorXd& f, const VectorXd& f_x,
@@ -49,6 +56,7 @@ enum class DerivativeFlags : uint8_t {
   f_z = 1 << 2,
   f_xz_y = 1 << 3,
   f_zz_y = 1 << 4,
+  f_zz_y_lb = 1 << 5,
 };
 
 inline DerivativeFlags operator|(DerivativeFlags a, DerivativeFlags b) {

@@ -45,8 +45,6 @@ class StaticPolytope : public ConvexSet {
 
   MatrixXd get_projection_matrix() const override;
 
-  VectorXd get_center(const VectorXd& x) const override;
-
   bool is_strongly_convex() const override;
 
  private:
@@ -119,9 +117,11 @@ const Derivatives& StaticPolytope<nz_>::UpdateDerivatives(
     derivatives_.f_z =
         A_ + 2 * sc_modulus_ * VectorXd::Ones(nr_) * (z - p_).transpose();
   }
-  if (has_flag(flag, DerivativeFlags::f_zz_y)) {
+  if (has_flag(flag, DerivativeFlags::f_zz_y) ||
+      has_flag(flag, DerivativeFlags::f_zz_y_lb)) {
     derivatives_.f_zz_y =
         2 * sc_modulus_ * y.sum() * MatrixXd::Identity(kNz, kNz);
+    derivatives_.f_zz_y_lb = derivatives_.f_zz_y;
   }
   return derivatives_;
 }
@@ -168,12 +168,6 @@ inline int StaticPolytope<nz_>::ndx() const {
 template <int nz_>
 inline MatrixXd StaticPolytope<nz_>::get_projection_matrix() const {
   return MatrixXd::Identity(kNz, kNz);
-}
-
-template <int nz_>
-inline VectorXd StaticPolytope<nz_>::get_center(const VectorXd& x) const {
-  assert(x.rows() == kNx);
-  return p_;
 }
 
 template <int nz_>

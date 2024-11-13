@@ -38,8 +38,6 @@ class Ellipsoid : public ConvexSet {
 
   MatrixXd get_projection_matrix() const override;
 
-  VectorXd get_center(const VectorXd& x) const override;
-
   bool is_strongly_convex() const override;
 
  private:
@@ -103,8 +101,10 @@ const Derivatives& Ellipsoid<nz_>::UpdateDerivatives(const VectorXd& x,
     derivatives_.f_x(0) =
         -2 * (z - p).transpose() * RQRt * (v + wg_hat * (z - p));
   }
-  if (has_flag(flag, DerivativeFlags::f_zz_y)) {
+  if (has_flag(flag, DerivativeFlags::f_zz_y) ||
+      has_flag(flag, DerivativeFlags::f_zz_y_lb)) {
     derivatives_.f_zz_y = 2 * y(0) * RQRt;
+    derivatives_.f_zz_y_lb = derivatives_.f_zz_y;
   }
   if (has_flag(flag, DerivativeFlags::f_xz_y)) {
     derivatives_.f_xz_y =
@@ -170,12 +170,6 @@ inline int Ellipsoid<nz_>::ndx() const {
 template <int nz_>
 inline MatrixXd Ellipsoid<nz_>::get_projection_matrix() const {
   return MatrixXd::Identity(kNz, kNz);
-}
-
-template <int nz_>
-inline VectorXd Ellipsoid<nz_>::get_center(const VectorXd& x) const {
-  assert(x.rows() == kNx);
-  return x.head<kNz>();
 }
 
 template <int nz_>

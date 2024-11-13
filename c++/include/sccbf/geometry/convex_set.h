@@ -43,9 +43,6 @@ class ConvexSet {
   // compactness when needed).
   virtual MatrixXd get_projection_matrix() const = 0;
 
-  // Center of convex set at state x.
-  virtual VectorXd get_center(const VectorXd& x) const = 0;
-
   virtual bool is_strongly_convex() const = 0;
 
   // Non-virtual functions.
@@ -54,7 +51,9 @@ class ConvexSet {
 
   const Derivatives& get_derivatives() const;
 
-  VectorXd get_center() const;
+  void set_x(const VectorXd& x);
+
+  void set_dx(const VectorXd& dx);
 
   void set_states(const VectorXd& x, const VectorXd& dx);
 
@@ -83,13 +82,19 @@ inline const Derivatives& ConvexSet::get_derivatives() const {
   return derivatives_;
 }
 
-inline VectorXd ConvexSet::get_center() const { return get_center(x_); }
+inline void ConvexSet::set_x(const VectorXd& x) {
+  assert(x.rows() == nx());
+  x_ = x;
+}
+
+inline void ConvexSet::set_dx(const VectorXd& dx) {
+  assert(dx.rows() == ndx());
+  dx_ = dx;
+}
 
 inline void ConvexSet::set_states(const VectorXd& x, const VectorXd& dx) {
-  assert(x.rows() == nx());
-  assert(dx.rows() == ndx());
-  x_ = x;
-  dx_ = dx;
+  set_x(x);
+  set_dx(dx);
 }
 
 inline const VectorXd& ConvexSet::x() { return x_; }
