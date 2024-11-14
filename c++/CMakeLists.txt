@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.15)
 ## User flags
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_BENCHMARKS
-  "Build benchmarks for solvers (only built if BUILD_TESTS is ON)"
+  "Build benchmarks (only built if BUILD_TESTS is enabled)"
   ON
 )
 option(BUILD_APPS "Build examples" ON)
@@ -21,19 +21,23 @@ project(
 ## Compiler flags
 message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
 
-# TODO: Instead use compile_features
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
+set(CMAKE_CXX_FLAGS
+  "${CMAKE_CXX_FLAGS} \
+  -pedantic"
+)
+set(CMAKE_CXX_FLAGS_DEBUG
+  "${CMAKE_CXX_FLAGS_DEBUG} \
   -O0 -Wall -Wextra -Wconversion -g"
 )
 # -ffast-math (-fno-math-errno, -Ofast) not used because it breaks IEEE compliance
 # TODO: Test -mavx2
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
+set(CMAKE_CXX_FLAGS_RELEASE
+  "${CMAKE_CXX_FLAGS_RELEASE} \
   -O3 -Werror -DNDEBUG -funroll-loops -march=native -mfpmath=sse -fopenmp"
 )
 

@@ -8,21 +8,32 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 
-## Add test executables
-set(LIB_TEST_SOURCES
-  "${PROJECT_SOURCE_DIR}/tests/lemke_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/utils/logsumexp_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/utils/matrixfunctions_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/utils/numericalgradient_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/geometry/geometry_test.cc"
+set(LIB_TEST_SOURCES_COLLISION
   "${PROJECT_SOURCE_DIR}/tests/collision/distance_test.cc"
 )
 
-add_executable(${LIB_CORE}-tests
-  ${LIB_TEST_SOURCES}
+set(LIB_TEST_SOURCES_GEOMETRY
+  "${PROJECT_SOURCE_DIR}/tests/geometry/geometry_test.cc"
 )
 
-target_link_libraries(${LIB_CORE}-tests
+set(LIB_TEST_SOURCES_UTILS
+  "${PROJECT_SOURCE_DIR}/tests/utils/logsumexp_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/utils/matrixfunctions_test.cc"
+  "${PROJECT_SOURCE_DIR}/tests/utils/numericalgradient_test.cc"  
+)
+
+set(LIB_TEST_SOURCES_OTHERS
+  "${PROJECT_SOURCE_DIR}/tests/lemke_test.cc"
+)
+
+add_executable(${LIB_CORE}_tests
+  ${LIB_TEST_SOURCES_COLLISION}
+  ${LIB_TEST_SOURCES_GEOMETRY}
+  ${LIB_TEST_SOURCES_UTILS}
+  ${LIB_TEST_SOURCES_OTHERS}
+)
+
+target_link_libraries(${LIB_CORE}_tests
   PRIVATE
     ${LIB_CORE}
     GTest::gtest_main
@@ -30,4 +41,4 @@ target_link_libraries(${LIB_CORE}-tests
 
 
 include(GoogleTest)
-gtest_discover_tests(${LIB_CORE}-tests)
+gtest_discover_tests(${LIB_CORE}_tests)

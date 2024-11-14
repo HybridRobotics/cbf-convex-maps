@@ -25,8 +25,8 @@ struct KktOdeOptions {
   double timestep = 100 * 1e-6;  // [us].
 
   // Larger values of epsilon values induce smoothness around vertices.
-  double index_set_eps = 1e-4;
-  double dual_eps = 1e-4;
+  double index_set_eps = 1e-2;
+  double dual_eps = 1e-3;
   // Stability constants.
   double stability_const_dual_inf = 10;
   double stability_const_prim_inf = 50;
