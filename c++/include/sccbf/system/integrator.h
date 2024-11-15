@@ -36,7 +36,6 @@ Integrator<n>::Integrator(const MatrixXd& constr_mat_u,
     : DynamicalSystem(kNx, kNu, constr_mat_u, constr_vec_u),
       nru_(static_cast<int>(constr_mat_u.rows())) {
   static_assert(n >= 2);
-  assert(constr_mat_u.cols() == kNu);
 
   CheckDimensions();
 }
@@ -45,7 +44,8 @@ template <int n>
 Integrator<n>::~Integrator() {}
 
 template <int n>
-inline void Integrator<n>::Dynamics(const VectorXd& x, VectorXd& f, MatrixXd& g) const {
+inline void Integrator<n>::Dynamics(const VectorXd& x, VectorXd& f,
+                                    MatrixXd& g) const {
   assert(x.rows() == kNx);
   assert(f.rows() == kNx);
   assert((g.rows() == kNx) && (g.cols() == kNu));
@@ -55,13 +55,19 @@ inline void Integrator<n>::Dynamics(const VectorXd& x, VectorXd& f, MatrixXd& g)
 }
 
 template <int n>
-inline int Integrator<n>::nx() const {return kNx;}
+inline int Integrator<n>::nx() const {
+  return kNx;
+}
 
 template <int n>
-inline int Integrator<n>::nu() const {return kNu;}
+inline int Integrator<n>::nu() const {
+  return kNu;
+}
 
 template <int n>
-inline int Integrator<n>::nru() const {return nru_;}
+inline int Integrator<n>::nru() const {
+  return nru_;
+}
 
 typedef Integrator<2> Integrator2d;
 typedef Integrator<3> Integrator3d;
@@ -69,4 +75,4 @@ typedef Integrator<4> Integrator4d;
 
 }  // namespace sccbf
 
-#endif // SCCBF_SYSTEM_INTEGRATOR_H_
+#endif  // SCCBF_SYSTEM_INTEGRATOR_H_

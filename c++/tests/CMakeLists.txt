@@ -16,6 +16,10 @@ set(LIB_TEST_SOURCES_GEOMETRY
   "${PROJECT_SOURCE_DIR}/tests/geometry/geometry_test.cc"
 )
 
+set(LIB_TEST_SOURCES_SYSTEM
+  "${PROJECT_SOURCE_DIR}/tests/system/system_test.cc"
+)
+
 set(LIB_TEST_SOURCES_UTILS
   "${PROJECT_SOURCE_DIR}/tests/utils/logsumexp_test.cc"
   "${PROJECT_SOURCE_DIR}/tests/utils/matrixfunctions_test.cc"
@@ -29,6 +33,7 @@ set(LIB_TEST_SOURCES_OTHERS
 add_executable(${LIB_CORE}_tests
   ${LIB_TEST_SOURCES_COLLISION}
   ${LIB_TEST_SOURCES_GEOMETRY}
+  ${LIB_TEST_SOURCES_SYSTEM}
   ${LIB_TEST_SOURCES_UTILS}
   ${LIB_TEST_SOURCES_OTHERS}
 )

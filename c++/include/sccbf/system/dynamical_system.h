@@ -12,7 +12,8 @@ class DynamicalSystem {
  protected:
   DynamicalSystem(int nx, int nu, int nru);
 
-  DynamicalSystem(int nx, int nu, const MatrixXd& constr_mat_u, const VectorXd& constr_vec_u);
+  DynamicalSystem(int nx, int nu, const MatrixXd& constr_mat_u,
+                  const VectorXd& constr_vec_u);
 
   VectorXd x_;
   MatrixXd constr_mat_u_;
@@ -56,7 +57,11 @@ inline DynamicalSystem::DynamicalSystem(int nx, int nu, int nru)
   constr_vec_u_ = VectorXd::Zero(nru);
 }
 
-inline DynamicalSystem::DynamicalSystem(int nx, int nu, const MatrixXd& constr_mat_u, const VectorXd& constr_vec_u): x_(nx) {
+inline DynamicalSystem::DynamicalSystem(int nx, int nu,
+                                        const MatrixXd& constr_mat_u,
+                                        const VectorXd& constr_vec_u)
+    : x_(nx) {
+  assert(constr_mat_u.cols() == nu);
   assert(constr_mat_u.rows() == constr_vec_u.rows());
   x_ = VectorXd::Zero(nx);
   constr_mat_u_ = constr_mat_u;
@@ -74,7 +79,7 @@ inline const VectorXd& DynamicalSystem::IntegrateDynamics(const VectorXd& u,
   // const auto input_infeasibility = constr_mat_u_ * u - constr_vec_u_;
   // if (!(input_infeasibility.array() <= 0.0).all())
   //   std::runtime_error("Input is not feasible for the input constraints!");
-  
+
   VectorXd f = VectorXd::Zero(nx());
   MatrixXd g = MatrixXd::Zero(nx(), nu());
   Dynamics(f, g);
