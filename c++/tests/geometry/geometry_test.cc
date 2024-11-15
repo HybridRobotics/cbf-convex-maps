@@ -154,7 +154,7 @@ const DerivativeFlags kFlag = DerivativeFlags::f | DerivativeFlags::f_x |
 const double kDerivativeErrorTol = 1e-3;
 
 // Ellipsoid test
-TEST(GeometryTest, Ellipsoid2d) {
+TEST(ConvexSetTest, Ellipsoid2d) {
   MatrixXd Q(2, 2);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -169,7 +169,7 @@ TEST(GeometryTest, Ellipsoid2d) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, Ellipsoid3d) {
+TEST(ConvexSetTest, Ellipsoid3d) {
   MatrixXd Q(3, 3);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -185,7 +185,7 @@ TEST(GeometryTest, Ellipsoid3d) {
 }
 
 // StaticEllipsoid test
-TEST(GeometryTest, StaticEllipsoid2d) {
+TEST(ConvexSetTest, StaticEllipsoid2d) {
   MatrixXd Q(2, 2);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -201,7 +201,7 @@ TEST(GeometryTest, StaticEllipsoid2d) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, StaticEllipsoid3d) {
+TEST(ConvexSetTest, StaticEllipsoid3d) {
   MatrixXd Q(3, 3);
   const double eps = 1.0;
   RandomSpdMatrix(Q, eps);
@@ -218,7 +218,7 @@ TEST(GeometryTest, StaticEllipsoid3d) {
 }
 
 // Polytope test
-TEST(GeometryTest, Polytope2d) {
+TEST(ConvexSetTest, Polytope2d) {
   const int nr = 6;
   VectorXd center = VectorXd::Zero(2);
   MatrixXd A(nr, 2);
@@ -237,7 +237,7 @@ TEST(GeometryTest, Polytope2d) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, Polytope3d) {
+TEST(ConvexSetTest, Polytope3d) {
   const int nr = 10;
   VectorXd center = VectorXd::Zero(3);
   MatrixXd A(nr, 3);
@@ -257,7 +257,7 @@ TEST(GeometryTest, Polytope3d) {
 }
 
 // StaticPolytope test
-TEST(GeometryTest, StaticPolytope2d) {
+TEST(ConvexSetTest, StaticPolytope2d) {
   const int nr = 6;
   VectorXd p = VectorXd::Random(2);
   MatrixXd A(nr, 2);
@@ -276,7 +276,7 @@ TEST(GeometryTest, StaticPolytope2d) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, StaticHalfspace) {
+TEST(ConvexSetTest, StaticHalfspace) {
   const int nr = 1;
   VectorXd p = VectorXd::Random(3);
   MatrixXd A(nr, 3);
@@ -295,7 +295,7 @@ TEST(GeometryTest, StaticHalfspace) {
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
 
-TEST(GeometryTest, StaticPolytope3d) {
+TEST(ConvexSetTest, StaticPolytope3d) {
   const int nr = 10;
   VectorXd p = VectorXd::Random(3);
   MatrixXd A(nr, 3);
@@ -313,7 +313,5 @@ TEST(GeometryTest, StaticPolytope3d) {
 
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
-
-// TEST: Polytope with one face.
 
 }  // namespace

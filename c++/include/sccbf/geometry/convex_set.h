@@ -1,6 +1,8 @@
 #ifndef SCCBF_GEOMETRY_CONVEX_SET_H_
 #define SCCBF_GEOMETRY_CONVEX_SET_H_
 
+#include <cassert>
+
 #include "sccbf/data_types.h"
 #include "sccbf/derivatives.h"
 
@@ -114,7 +116,7 @@ inline void ConvexSet::CheckDimensions() const {
   assert(x_.rows() == nx());
   assert(dx_.rows() == ndx());
 
-  MatrixXd mat = get_projection_matrix();
+  const MatrixXd mat = get_projection_matrix();
   assert(mat.rows() == dim());
   assert(mat.cols() == nz());
 
