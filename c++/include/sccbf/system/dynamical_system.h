@@ -4,7 +4,6 @@
 #include <cassert>
 
 #include "sccbf/data_types.h"
-#include "sccbf/derivatives.h"
 
 namespace sccbf {
 

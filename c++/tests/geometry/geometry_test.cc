@@ -9,6 +9,8 @@
 #include "sccbf/geometry/polytope.h"
 #include "sccbf/geometry/static_ellipsoid.h"
 #include "sccbf/geometry/static_polytope.h"
+#include "sccbf/transformation/intersection.h"
+#include "sccbf/transformation/minkowski.h"
 #include "sccbf/utils/matrix_utils.h"
 #include "sccbf/utils/numerical_derivatives.h"
 
@@ -310,6 +312,69 @@ TEST(ConvexSetTest, StaticPolytope3d) {
       set.UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
   Derivatives d2 =
       NumericalDerivatives(set, var.x, var.x_dot, var.dx, var.z, var.y);
+
+  EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
+}
+
+// IntersectionSet test
+TEST(ConvexSetTest, IntersectionSet) {
+  // Set 1: polytope.
+  const int nr = 10;
+  VectorXd center = VectorXd::Zero(3);
+  MatrixXd A(nr, 3);
+  VectorXd b(nr);
+  const double in_radius = 1.0;
+  RandomPolytope(center, in_radius, A, b);
+  const double sc_modulus = 1e-2;
+  std::shared_ptr<ConvexSet> ptr1 =
+      std::make_shared<Polytope3d>(A, b, 0.0, sc_modulus, true);
+  // Set 2: ellipsoid.
+  MatrixXd Q(3, 3);
+  const double eps = 1.0;
+  RandomSpdMatrix(Q, eps);
+  std::shared_ptr<ConvexSet> ptr2 = std::make_shared<Ellipsoid3d>(Q, 0.0);
+  // Intersection set.
+  const MatrixXd hess_lb = sc_modulus * MatrixXd::Identity(3, 3);
+  std::shared_ptr<ConvexSet> set_ptr =
+      std::make_shared<IntersectionSet>(ptr1, ptr2, hess_lb);
+
+  StateVariables var = RandomSeStateVariables<3>(*set_ptr);
+
+  const Derivatives& d1 =
+      set_ptr->UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
+  Derivatives d2 =
+      NumericalDerivatives(*set_ptr, var.x, var.x_dot, var.dx, var.z, var.y);
+
+  EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
+}
+
+// MinkowskiSumSet test
+TEST(ConvexSetTest, MinkowskiSumSet) {
+  // Set 1: polytope.
+  const int nr = 10;
+  VectorXd center = VectorXd::Zero(3);
+  MatrixXd A(nr, 3);
+  VectorXd b(nr);
+  const double in_radius = 1.0;
+  RandomPolytope(center, in_radius, A, b);
+  const double sc_modulus = 1e-2;
+  std::shared_ptr<ConvexSet> ptr1 =
+      std::make_shared<Polytope3d>(A, b, 0.0, sc_modulus, true);
+  // Set 2: ellipsoid.
+  MatrixXd Q(3, 3);
+  const double eps = 1.0;
+  RandomSpdMatrix(Q, eps);
+  std::shared_ptr<ConvexSet> ptr2 = std::make_shared<Ellipsoid3d>(Q, 0.0);
+  // Intersection set.
+  std::shared_ptr<ConvexSet> set_ptr =
+      std::make_shared<MinkowskiSumSet>(ptr1, ptr2);
+
+  StateVariables var = RandomSeStateVariables<3>(*set_ptr);
+
+  const Derivatives& d1 =
+      set_ptr->UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
+  Derivatives d2 =
+      NumericalDerivatives(*set_ptr, var.x, var.x_dot, var.dx, var.z, var.y);
 
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
 }
