@@ -24,7 +24,7 @@ class IntegratorSe : public DynamicalSystem {
 
   int nru() const override;
 
-  const VectorXd& IntegrateDynamics(const VectorXd& u, double dt);
+  const VectorXd& IntegrateDynamics(const VectorXd& u, double dt) override;
 
  private:
   static constexpr int kNx = n + n * n;

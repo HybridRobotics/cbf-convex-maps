@@ -30,10 +30,10 @@ class DynamicalSystem {
 
   virtual int nru() const = 0;
 
+  virtual const VectorXd& IntegrateDynamics(const VectorXd& u, double dt);
+
   // Non-virtual functions.
   void Dynamics(VectorXd& f, MatrixXd& g) const;
-
-  const VectorXd& IntegrateDynamics(const VectorXd& u, double dt);
 
   void set_x(const VectorXd& x);
 
