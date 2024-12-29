@@ -17,6 +17,10 @@ set(LIB_CORE_SOURCES_GEOMETRY
   "${PROJECT_SOURCE_DIR}/src/geometry/static_polytope.cc"
 )
 
+set(LIB_CORE_SOURCES_SYSTEM
+  "${PROJECT_SOURCE_DIR}/src/system/quadrotor.cc"
+)
+
 set(LIB_CORE_SOURCES_TRANSFORMATION
   "${PROJECT_SOURCE_DIR}/src/transformation/intersection.cc"
   "${PROJECT_SOURCE_DIR}/src/transformation/minkowski.cc"
@@ -33,6 +37,7 @@ set(LIB_CORE_SOURCES_OTHERS
 add_library(${LIB_CORE}
   ${LIB_CORE_SOURCES_COLLISION}
   ${LIB_CORE_SOURCES_GEOMETRY}
+  ${LIB_CORE_SOURCES_SYSTEM}
   ${LIB_CORE_SOURCES_TRANSFORMATION}
   ${LIB_CORE_SOURCES_UTILS}
   ${LIB_CORE_SOURCES_OTHERS}

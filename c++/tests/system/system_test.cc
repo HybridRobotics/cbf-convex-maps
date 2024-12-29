@@ -13,6 +13,7 @@
 #include "sccbf/system/double_integrator_se3.h"
 #include "sccbf/system/unicycle.h"
 #include "sccbf/system/unicycle_se2.h"
+#include "sccbf/system/quadrotor.h"
 
 
 namespace {
@@ -194,6 +195,34 @@ TEST(DynamicalSystemTest, UnicycleSe2) {
   const VectorXd x_copy = sys.x();
   sys.Dynamics(x_copy, vf.f, vf.g);
   NumericalDynamics(sys, x_copy, vf_numerical.f, vf_numerical.g);
+
+  EXPECT_PRED_FORMAT4(AssertDynamicsEQ, vf, vf_numerical, x_copy, 1e-3);
+}
+
+constexpr double kGravity = 9.81; // [m/s^2].
+
+TEST(DynamicalSystemTest, Quadrotor) {
+  const int nx = 3 + 3 + 9 + 3;
+  const int nu = 1 + 3;
+  const double mass = 0.5; // [kg].
+  const Eigen::Vector3d inertia_diag(2.32 * 1e-3, 2.32 * 1e-3, 4 * 1e-3);
+  const MatrixXd inertia = inertia_diag.asDiagonal();
+  const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
+  const VectorXd constr_vec_u = VectorXd::Zero(0);
+
+  std::shared_ptr<DynamicalSystem> sys = std::make_shared<Quadrotor>(mass, inertia, constr_mat_u, constr_vec_u);
+  VectorXd x(nx);
+  x.head<6>() = VectorXd::Random(6);
+  MatrixXd R(3, 3);
+  RandomRotation<3>(R);
+  x.segment<9>(6) = R.reshaped(9, 1);
+  x.tail<3>() = VectorXd::Random(3);
+  sys->set_x(x);
+
+  DynamicsVectorField vf(nx, nu), vf_numerical(nx, nu);
+  const VectorXd x_copy = sys->x();
+  sys->Dynamics(x_copy, vf.f, vf.g);
+  NumericalDynamics(*sys, x_copy, vf_numerical.f, vf_numerical.g);
 
   EXPECT_PRED_FORMAT4(AssertDynamicsEQ, vf, vf_numerical, x_copy, 1e-3);
 }
