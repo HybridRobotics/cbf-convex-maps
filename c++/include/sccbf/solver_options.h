@@ -35,7 +35,7 @@ struct KktOdeOptions {
   double cholesky_eps = 1e-7;
   // KKT ODE tolerance options.
   bool use_kkt_err_tol = false;
-  //  The KKT error metric is unscaled.
+  //  Note: The KKT error metric is unscaled.
   double max_inf_kkt_err = 1e-1;
   //  The primal dual gap is scaled, but is only accurate if the current KKT
   //  solution is primal feasible.

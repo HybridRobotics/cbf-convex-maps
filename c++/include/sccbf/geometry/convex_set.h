@@ -47,15 +47,18 @@ class ConvexSet {
 
   virtual bool is_strongly_convex() const = 0;
 
+  virtual void set_x(const VectorXd& x);
+
+  virtual void set_dx(const VectorXd& dx);
+
   // Non-virtual functions.
   const Derivatives& UpdateDerivatives(const VectorXd& z, const VectorXd& y,
                                        DerivativeFlags flag);
 
   const Derivatives& get_derivatives() const;
 
-  void set_x(const VectorXd& x);
-
-  void set_dx(const VectorXd& dx);
+  void LieDerivatives(const VectorXd& z, const VectorXd& y, const MatrixXd& fg,
+                      MatrixXd& L_fg_y) const;
 
   void set_states(const VectorXd& x, const VectorXd& dx);
 
@@ -82,6 +85,12 @@ inline const Derivatives& ConvexSet::UpdateDerivatives(const VectorXd& z,
 
 inline const Derivatives& ConvexSet::get_derivatives() const {
   return derivatives_;
+}
+
+inline void ConvexSet::LieDerivatives(const VectorXd& z, const VectorXd& y,
+                                      const MatrixXd& fg,
+                                      MatrixXd& L_fg_y) const {
+  return LieDerivatives(x_, z, y, fg, L_fg_y);
 }
 
 inline void ConvexSet::set_x(const VectorXd& x) {
