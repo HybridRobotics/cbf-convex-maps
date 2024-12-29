@@ -23,7 +23,7 @@ set(LIB_TEST_SOURCES_SYSTEM
 set(LIB_TEST_SOURCES_UTILS
   "${PROJECT_SOURCE_DIR}/tests/utils/logsumexp_test.cc"
   "${PROJECT_SOURCE_DIR}/tests/utils/matrixfunctions_test.cc"
-  "${PROJECT_SOURCE_DIR}/tests/utils/numericalgradient_test.cc"  
+  "${PROJECT_SOURCE_DIR}/tests/utils/numericalgradient_test.cc"
 )
 
 set(LIB_TEST_SOURCES_OTHERS
@@ -47,3 +47,14 @@ target_link_libraries(${LIB_CORE}_tests
 
 include(GoogleTest)
 gtest_discover_tests(${LIB_CORE}_tests)
+
+
+## Standalone tests.
+add_executable(${LIB_CORE}_so3pd_tracking_test
+  "${PROJECT_SOURCE_DIR}/tests/utils/so3pd_tracking_test.cc"
+)
+
+target_link_libraries(${LIB_CORE}_so3pd_tracking_test
+  PRIVATE
+    ${LIB_CORE}
+)
