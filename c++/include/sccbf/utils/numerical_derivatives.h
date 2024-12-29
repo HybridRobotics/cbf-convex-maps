@@ -1,5 +1,5 @@
-#ifndef SCCBF_MATH_UTILS_NUMERICAL_DERIVATIVES_H_
-#define SCCBF_MATH_UTILS_NUMERICAL_DERIVATIVES_H_
+#ifndef SCCBF_UTILS_NUMERICAL_DERIVATIVES_H_
+#define SCCBF_UTILS_NUMERICAL_DERIVATIVES_H_
 
 #include <functional>
 
@@ -30,4 +30,4 @@ void NumericalDynamics(DynamicalSystem& sys, const VectorXd& x, VectorXd& f,
 
 }  // namespace sccbf
 
-#endif  // SCCBF_MATH_UTILS_NUMERICAL_DERIVATIVES_H_
+#endif  // SCCBF_UTILS_NUMERICAL_DERIVATIVES_H_

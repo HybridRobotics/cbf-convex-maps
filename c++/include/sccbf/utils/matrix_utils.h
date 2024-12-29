@@ -1,5 +1,5 @@
-#ifndef SCCBF_UTILS_H_
-#define SCCBF_UTILS_H_
+#ifndef SCCBF_UTILS_MATRIX_UTILS_H_
+#define SCCBF_UTILS_MATRIX_UTILS_H_
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -191,4 +191,4 @@ inline void RandomPolytope(const VectorXd& c, double in_radius, MatrixXd& A,
 
 }  // namespace sccbf
 
-#endif  // SCCBF_UTILS_H_
+#endif  // SCCBF_UTILS_MATRIX_UTILS_H_
