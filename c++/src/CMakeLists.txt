@@ -19,6 +19,7 @@ set(LIB_CORE_SOURCES_GEOMETRY
 
 set(LIB_CORE_SOURCES_SYSTEM
   "${PROJECT_SOURCE_DIR}/src/system/quadrotor.cc"
+  "${PROJECT_SOURCE_DIR}/src/system/quadrotor_reduced.cc"
 )
 
 set(LIB_CORE_SOURCES_TRANSFORMATION

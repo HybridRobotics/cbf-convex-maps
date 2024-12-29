@@ -14,6 +14,7 @@
 #include "sccbf/system/unicycle.h"
 #include "sccbf/system/unicycle_se2.h"
 #include "sccbf/system/quadrotor.h"
+#include "sccbf/system/quadrotor_reduced.h"
 
 
 namespace {
@@ -217,6 +218,29 @@ TEST(DynamicalSystemTest, Quadrotor) {
   RandomRotation<3>(R);
   x.segment<9>(6) = R.reshaped(9, 1);
   x.tail<3>() = VectorXd::Random(3);
+  sys->set_x(x);
+
+  DynamicsVectorField vf(nx, nu), vf_numerical(nx, nu);
+  const VectorXd x_copy = sys->x();
+  sys->Dynamics(x_copy, vf.f, vf.g);
+  NumericalDynamics(*sys, x_copy, vf_numerical.f, vf_numerical.g);
+
+  EXPECT_PRED_FORMAT4(AssertDynamicsEQ, vf, vf_numerical, x_copy, 1e-3);
+}
+
+TEST(DynamicalSystemTest, QuadrotorReduced) {
+  const int nx = 3 + 3 + 9;
+  const int nu = 1 + 3;
+  const double mass = 0.5; // [kg].
+  const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
+  const VectorXd constr_vec_u = VectorXd::Zero(0);
+
+  std::shared_ptr<DynamicalSystem> sys = std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  VectorXd x(nx);
+  x.head<6>() = VectorXd::Random(6);
+  MatrixXd R(3, 3);
+  RandomRotation<3>(R);
+  x.tail<9>() = R.reshaped(9, 1);
   sys->set_x(x);
 
   DynamicsVectorField vf(nx, nu), vf_numerical(nx, nu);
