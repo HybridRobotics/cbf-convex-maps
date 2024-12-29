@@ -9,6 +9,7 @@
 #include "sccbf/data_types.h"
 #include "sccbf/derivatives.h"
 #include "sccbf/geometry/convex_set.h"
+#include "sccbf/system/dynamical_system.h"
 
 namespace sccbf {
 
@@ -145,6 +146,41 @@ void NumericalLieDerivatives(ConvexSet& set, const VectorXd& x,
     h_ << 0;
     NumericalGradient(func, h_, grad_);
     L_fg_y(i) = grad_(0);
+  }
+}
+
+void NumericalDynamics(DynamicalSystem& sys, const VectorXd& x, VectorXd& f,
+                       MatrixXd& g) {
+  const int nx = sys.nx();
+  const int nu = sys.nu();
+
+  assert(x.rows() == nx);
+  assert(f.rows() == nx);
+  assert((g.rows() == nx) && (g.cols() == nu));
+
+  VectorXd u = VectorXd::Zero(nu);
+  VectorXd grad(1);
+  VectorXd h(1);
+  h << 0;
+  for (int i = 0; i < nx; ++i) {
+    u = VectorXd::Zero(nu);
+    auto func = [&sys, &x, &u, i](const VectorXd& h_) -> double {
+      sys.set_x(x);
+      const VectorXd& x_new = sys.IntegrateDynamics(u, h_(0));
+      return x_new(i);
+    };
+
+    // Compute f.
+    NumericalGradient(func, h, grad);
+    f(i) = grad(0);
+
+    // Compute g.
+    for (int j = 0; j < nu; ++j) {
+      u = VectorXd::Zero(nu);
+      u(j) = 1.0;
+      NumericalGradient(func, h, grad);
+      g(i, j) = grad(0) - f(i);
+    }
   }
 }
 

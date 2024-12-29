@@ -46,9 +46,11 @@ inline void Unicycle::Dynamics(const VectorXd& x, VectorXd& f,
   assert((g.rows() == kNx) && (g.cols() == kNu));
 
   f = VectorXd::Zero(kNx);
-  MatrixXd g(kNx, kNu);
   const double theta = x(2);
-  g << std::cos(theta), 0.0, std::sin(theta), 0.0, 0.0, 1.0;
+  g = MatrixXd::Zero(kNx, kNu);
+  g(0, 0) = std::cos(theta);
+  g(1, 0) = std::sin(theta);
+  g(2, 1) = 1.0;
 }
 
 inline int Unicycle::nx() const { return kNx; }

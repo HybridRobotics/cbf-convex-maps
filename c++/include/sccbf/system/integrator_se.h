@@ -94,13 +94,14 @@ template <int n>
 const VectorXd& IntegratorSe<n>::IntegrateDynamics(const VectorXd& u,
                                                    double dt) {
   const auto p = x_.head<n>();
-  const auto R = x_.tail<n * n>().reshaped(3, 3);
+  const auto R = x_.tail<n * n>().reshaped(n, n);
 
   const auto v = u.head<n>();
   const auto w = u.tail<kNu - n>();
   x_.head<n>() = p + v * dt;
   MatrixXd R_new(n, n);
-  IntegrateSo(R, w * dt, R_new);
+  if constexpr (n == 2) IntegrateSo2(R, w(0) * dt, R_new);
+  if constexpr (n == 3) IntegrateSo3(R, w * dt, R_new);
   x_.tail<n * n>() = R_new.reshaped(n * n, 1);
   return x_;
 }

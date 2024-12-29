@@ -75,7 +75,10 @@ inline void DynamicalSystem::Dynamics(VectorXd& f, MatrixXd& g) const {
 inline const VectorXd& DynamicalSystem::IntegrateDynamics(const VectorXd& u,
                                                           double dt) {
   assert(u.rows() == nu());
-  assert(dt >= 0);
+  // Allow negative times (for integration purposes).
+  // assert(dt >= 0);
+
+  // Allow input infeasibility.
   // const auto input_infeasibility = constr_mat_u_ * u - constr_vec_u_;
   // if (!(input_infeasibility.array() <= 0.0).all())
   //   std::runtime_error("Input is not feasible for the input constraints!");

@@ -11,6 +11,8 @@ struct Derivatives;
 
 class ConvexSet;
 
+class DynamicalSystem;
+
 void NumericalGradient(const std::function<double(const VectorXd&)>& func,
                        const VectorXd& x, VectorXd& grad);
 
@@ -22,6 +24,9 @@ void NumericalLieDerivatives(ConvexSet& set, const VectorXd& x,
                              const VectorXd& z, const VectorXd& y,
                              const MatrixXd& fg_dot, const MatrixXd& fg,
                              MatrixXd& L_fg_y);
+
+void NumericalDynamics(DynamicalSystem& sys, const VectorXd& x, VectorXd& f,
+                       MatrixXd& g);
 
 }  // namespace sccbf
 

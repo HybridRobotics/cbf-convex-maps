@@ -48,11 +48,15 @@ inline void UnicycleSe2::Dynamics(const VectorXd& x, VectorXd& f,
   assert((g.rows() == kNx) && (g.cols() == kNu));
 
   f = VectorXd::Zero(kNx);
-  MatrixXd g(kNx, kNu);
   const double ctheta = x(2);
   const double stheta = x(3);
-  g << ctheta, 0.0, stheta, 0.0, 0.0, -stheta, 0.0, ctheta, 0.0, -ctheta, 0.0,
-      -stheta;
+  g = MatrixXd::Zero(kNx, kNu);
+  g(0, 0) = ctheta;
+  g(1, 0) = stheta;
+  g(2, 1) = -stheta;
+  g(3, 1) = ctheta;
+  g(4, 1) = -ctheta;
+  g(5, 1) = -stheta;
 }
 
 inline int UnicycleSe2::nx() const { return kNx; }
