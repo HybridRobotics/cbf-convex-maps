@@ -5,6 +5,7 @@ add_library(${LIB_APPS}
   "${PROJECT_SOURCE_DIR}/apps/src/quadrotor_corridor.cc"
   "${PROJECT_SOURCE_DIR}/apps/src/quadrotor_downwash.cc"
   "${PROJECT_SOURCE_DIR}/apps/src/quadrotor_shape.cc"
+  "${PROJECT_SOURCE_DIR}/apps/src/quadrotor_uncertainty.cc"
 )
 
 target_include_directories(${LIB_APPS}

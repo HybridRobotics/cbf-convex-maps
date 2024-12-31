@@ -12,6 +12,7 @@
 #include "quadrotor_shape.h"
 #include "quadrotor_downwash.h"
 #include "quadrotor_corridor.h"
+#include "quadrotor_uncertainty.h"
 
 namespace {
 
@@ -225,6 +226,47 @@ TEST(GeometryTest, QuadrotorCorridor) {
   const double max_vel = 1.0; // ]m/s].
   const double margin = 0;
   auto set = QuadrotorCorridor(stop_time, orientation_cost, max_vel, margin);
+
+  Variables var = RandomVariables(set);
+
+  // Derivative test.
+  const Derivatives& d1 =
+      set.UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
+  Derivatives d2 =
+      NumericalDerivatives(set, var.x, var.dx, var.dx, var.z, var.y);
+
+  EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
+
+  // Lie derivative test.
+  const int nu = 4;
+  const double mass = 0.5; // [kg].
+  const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
+  const VectorXd constr_vec_u = VectorXd::Zero(0);
+
+  std::shared_ptr<DynamicalSystem> sys = std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  VectorXd f(15);
+  MatrixXd g(15, nu);
+  sys->Dynamics(var.x, f, g);
+  MatrixXd fg(15, nu + 1);
+  fg.col(0) = f;
+  fg.rightCols(nu) = g;
+
+  MatrixXd L_fg_y1(1, nu + 1), L_fg_y2(1, nu + 1);
+  set.LieDerivatives(var.x, var.z, var.y, fg, L_fg_y1);
+  NumericalLieDerivatives(set, var.x, var.z, var.y, fg, fg, L_fg_y2);
+
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, L_fg_y1, L_fg_y2, kDerivativeErrorTol);
+}
+
+// QuadrotorUncertainty test
+TEST(GeometryTest, QuadrotorUncertainty) {
+  const MatrixXd mat = MatrixXd::Random(3, 3);
+  const double eps = 1.0;
+  MatrixXd Q = mat.transpose() * mat + eps * MatrixXd::Identity(3, 3);
+  Eigen::Vector4d coeff = Eigen::Vector4d::Random();
+  coeff(0) = coeff(0) + 1.1;
+  const double margin = 0;
+  auto set = QuadrotorUncertainty(Q, coeff, margin);
 
   Variables var = RandomVariables(set);
 
