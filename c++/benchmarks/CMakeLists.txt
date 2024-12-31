@@ -23,6 +23,7 @@ macro(add_benchmark_executable src)
   )
 endmacro()
 
+add_benchmark_executable(dense_ldlt_bm)
 add_benchmark_executable(lemke_bm)
 add_benchmark_executable(distance_bm)
 add_benchmark_executable(kktode_bm)
