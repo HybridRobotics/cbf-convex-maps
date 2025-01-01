@@ -37,6 +37,8 @@ class CollisionPair {
 
   double get_kkt_solution(VectorXd& z, VectorXd& lambda) const;
 
+  void set_states(const VectorXd& x, const VectorXd& dx);
+
   friend class DistanceProblem;
 
  private:

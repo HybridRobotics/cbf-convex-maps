@@ -50,11 +50,11 @@ gtest_discover_tests(${LIB_CORE}_tests)
 
 
 ## Standalone tests.
-add_executable(${LIB_CORE}_so3pd_tracking_test
-  "${PROJECT_SOURCE_DIR}/tests/utils/so3pd_tracking_test.cc"
+add_executable(${LIB_CORE}_so3_tracking_test
+  "${PROJECT_SOURCE_DIR}/tests/utils/so3_tracking_test.cc"
 )
 
-target_link_libraries(${LIB_CORE}_so3pd_tracking_test
+target_link_libraries(${LIB_CORE}_so3_tracking_test
   PRIVATE
     ${LIB_CORE}
 )

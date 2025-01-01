@@ -71,6 +71,22 @@ TEST(MatrixFunctionTest, EulerToRotation) {
   EXPECT_NEAR(rotation.determinant(), 1, 1e-6);
 }
 
+TEST(MatrixFunctionTest, RotationFromZVector) {
+  // Generate random z-vector.
+  VectorXd z = VectorXd::Random(3);
+  z(0) = 2.0 * (z(0) - 0.5);
+  z(1) = 2.0 * (z(1) - 0.5);
+  z(2) = std::max(z(2), 1e-3);
+
+  MatrixXd rot(3, 3);
+  RotationFromZVector(z, rot);
+  z = z / z.norm();
+
+  EXPECT_TRUE(rot.isUnitary());
+  EXPECT_NEAR(rot.determinant(), 1, 1e-6);
+  EXPECT_NEAR((z - rot.col(2)).norm(), 0.0, 1e-6);
+}
+
 TEST(MatrixFunctionTest, RandomRotation2d) {
   MatrixXd rotation(2, 2);
   RandomRotation<2>(rotation);

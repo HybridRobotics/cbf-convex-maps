@@ -54,6 +54,28 @@ inline void EulerToRotation(double angle_x, double angle_y, double angle_z,
   rotation = (yaw * pitch * roll).matrix();
 }
 
+inline void RotationFromZVector(const VectorXd& z, MatrixXd& rot) {
+  assert(z.rows() == 3);
+  assert((rot.rows() == 3) && (rot.cols() == 3));
+  assert(z(2) > 0);
+
+  const double norm = z.norm();
+  assert(norm > 1e-3);
+  const auto zn = z / norm;
+  const double sin_x = -zn(1);
+  const double cos_x = std::sqrt(zn(0) * zn(0) + zn(2) * zn(2));
+  const double sin_y = zn(0) / cos_x;
+  const double cos_y = zn(2) / cos_x;
+
+  rot(0, 0) = cos_y;
+  rot(1, 0) = 0.0;
+  rot(2, 0) = -sin_y;
+  rot(0, 1) = sin_x * sin_y;
+  rot(1, 1) = cos_x;
+  rot(2, 1) = cos_y * sin_x;
+  rot.col(2) = zn;
+}
+
 template <int dim>
 inline void RandomRotation(MatrixXd& rotation) {
   static_assert((dim == 2) || (dim == 3));

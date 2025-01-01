@@ -14,6 +14,23 @@ struct So3PdParameters {
   double k_Omega;
 };
 
+inline VectorXd So3PTrackingControl(const MatrixXd& R, const MatrixXd& Rd,
+                                    const VectorXd& wd,
+                                    const So3PdParameters& param) {
+  assert((R.rows() == 3) && (R.cols() == 3));
+  assert((Rd.rows() == 3) && (Rd.cols() == 3));
+  assert(wd.rows() == 3);
+  const double k_R = param.k_R;
+  assert(k_R > 0);
+
+  const auto R_err = Rd.transpose() * R;
+  const auto e_R_hat = 0.5 * (R_err - R_err.transpose());
+  const Eigen::Vector3d e_R(e_R_hat(2, 1), e_R_hat(0, 2), e_R_hat(1, 0));
+
+  const VectorXd w = R_err.transpose() * wd - k_R * e_R;
+  return w;
+}
+
 inline VectorXd So3PdTrackingControl(const MatrixXd& R, const MatrixXd& Rd,
                                      const VectorXd& w, const VectorXd& wd,
                                      const VectorXd& dwd,

@@ -24,9 +24,35 @@ struct So3PdInput {
   cbf::So3PdParameters param;
 };
 
-void So3TrackingErrors(const So3PdInput& in, cbf::VectorXd& t_seq,
-                       cbf::VectorXd& e_R, cbf::VectorXd& e_Omega,
-                       cbf::VectorXd& M_norm) {
+void So3PTrackingErrors(const So3PdInput& in, cbf::VectorXd& t_seq,
+                        cbf::VectorXd& e_R, cbf::VectorXd& w_norm) {
+  cbf::MatrixXd R = in.R;
+  const auto Rd = in.Rd;
+  const auto wd = in.wd;
+  const auto param = in.param;
+
+  double dt = in.dt;
+  const auto T = in.T;
+  const int N = static_cast<int>(std::ceil(T / dt));
+  t_seq = cbf::VectorXd::LinSpaced(N, 0.0, T);
+  dt = t_seq(1) - t_seq(0);
+  e_R.resize(N);
+  w_norm.resize(N);
+
+  cbf::VectorXd w(3);
+  for (int i = 0; i < N; ++i) {
+    w = cbf::So3PTrackingControl(R, Rd, wd, param);
+
+    e_R(i) = 0.5 * (cbf::MatrixXd::Identity(3, 3) - Rd.transpose() * R).trace();
+    w_norm(i) = w.norm();
+
+    cbf::IntegrateSo3(R, w * dt, R);
+  }
+}
+
+void So3PdTrackingErrors(const So3PdInput& in, cbf::VectorXd& t_seq,
+                         cbf::VectorXd& e_R, cbf::VectorXd& e_Omega,
+                         cbf::VectorXd& M_norm) {
   cbf::MatrixXd R = in.R;
   const auto Rd = in.Rd;
   cbf::VectorXd w = in.w;
@@ -86,17 +112,34 @@ int main() {
 
   const So3PdInput in = {R, Rd, w, wd, dwd, inertia, dt, T, param};
 
-  // Get outputs.
-  cbf::VectorXd t_seq, e_R, e_Omega, M_norm;
-  So3TrackingErrors(in, t_seq, e_R, e_Omega, M_norm);
+  // Get first-order tracking data.
+  {
+    So3PdInput in_(in);
+    in_.param.k_R = 2.5;
+    cbf::VectorXd t_seq, e_R, w_norm;
+    So3PTrackingErrors(in_, t_seq, e_R, w_norm);
 
-  // Save to .csv file.
-  std::ofstream outfile("so3pd_tracking_test_data.csv");
-  for (int i = 0; i < t_seq.rows(); ++i) {
-    outfile << t_seq(i) << "," << e_R(i) << "," << e_Omega(i) << ","
-            << M_norm(i) << std::endl;
+    // Save to .csv file.
+    std::ofstream outfile("so3p_tracking_test_data.csv");
+    for (int i = 0; i < t_seq.rows(); ++i) {
+      outfile << t_seq(i) << "," << e_R(i) << "," << w_norm(i) << std::endl;
+    }
+    outfile.close();
   }
-  outfile.close();
+
+  // Get second-order tracking data.
+  {
+    cbf::VectorXd t_seq, e_R, e_Omega, M_norm;
+    So3PdTrackingErrors(in, t_seq, e_R, e_Omega, M_norm);
+
+    // Save to .csv file.
+    std::ofstream outfile("so3pd_tracking_test_data.csv");
+    for (int i = 0; i < t_seq.rows(); ++i) {
+      outfile << t_seq(i) << "," << e_R(i) << "," << e_Omega(i) << ","
+              << M_norm(i) << std::endl;
+    }
+    outfile.close();
+  }
 
   return EXIT_SUCCESS;
 }

@@ -140,6 +140,11 @@ double CollisionPair::get_kkt_solution(VectorXd& z_opt,
   return dist2_opt_;
 }
 
+void CollisionPair::set_states(const VectorXd& x, const VectorXd& dx) {
+  C1_->set_states(x, dx);
+  C2_->set_states(x, dx);
+}
+
 double CollisionPair::PrimalDualGap_() {
   const auto z1 = z_opt_.head(nz1_);
   const auto z2 = z_opt_.tail(nz2_);

@@ -4,18 +4,16 @@
 #include <memory>
 
 #include "sccbf/data_types.h"
-#include "sccbf/utils/numerical_derivatives.h"
-#include "sccbf/utils/matrix_utils.h"
-
+#include "sccbf/system/double_integrator_se3.h"
 #include "sccbf/system/dynamical_system.h"
 #include "sccbf/system/integrator.h"
 #include "sccbf/system/integrator_se.h"
-#include "sccbf/system/double_integrator_se3.h"
-#include "sccbf/system/unicycle.h"
-#include "sccbf/system/unicycle_se2.h"
 #include "sccbf/system/quadrotor.h"
 #include "sccbf/system/quadrotor_reduced.h"
-
+#include "sccbf/system/unicycle.h"
+#include "sccbf/system/unicycle_se2.h"
+#include "sccbf/utils/matrix_utils.h"
+#include "sccbf/utils/numerical_derivatives.h"
 
 namespace {
 
@@ -25,7 +23,7 @@ struct DynamicsVectorField {
   VectorXd f;
   MatrixXd g;
 
-  DynamicsVectorField(int nx, int nu): f(nx), g(nx, nu) {}
+  DynamicsVectorField(int nx, int nu) : f(nx), g(nx, nu) {}
 };
 
 // Assertion function
@@ -34,8 +32,8 @@ Eigen::IOFormat kMatFmt(4, 0, ", ", "\n", "[", "]");
 
 testing::AssertionResult AssertDynamicsEQ(
     const char* vf1_expr, const char* vf2_expr, const char* /*x_expr*/,
-    const char* /*tol_expr*/, const DynamicsVectorField& vf1, const DynamicsVectorField& vf2,
-    const VectorXd& x, double tol) {
+    const char* /*tol_expr*/, const DynamicsVectorField& vf1,
+    const DynamicsVectorField& vf2, const VectorXd& x, double tol) {
   auto failure = testing::AssertionFailure();
 
   bool success = true;
@@ -57,8 +55,7 @@ testing::AssertionResult AssertDynamicsEQ(
 
   if (success) return testing::AssertionSuccess();
 
-  failure << "Failure at x = " << std::endl
-          << x.transpose().format(kVecFmt);
+  failure << "Failure at x = " << std::endl << x.transpose().format(kVecFmt);
 
   return failure;
 }
@@ -200,18 +197,19 @@ TEST(DynamicalSystemTest, UnicycleSe2) {
   EXPECT_PRED_FORMAT4(AssertDynamicsEQ, vf, vf_numerical, x_copy, 1e-3);
 }
 
-constexpr double kGravity = 9.81; // [m/s^2].
+constexpr double kGravity = 9.81;  // [m/s^2].
 
 TEST(DynamicalSystemTest, Quadrotor) {
   const int nx = 3 + 3 + 9 + 3;
   const int nu = 1 + 3;
-  const double mass = 0.5; // [kg].
+  const double mass = 0.5;  // [kg].
   const Eigen::Vector3d inertia_diag(2.32 * 1e-3, 2.32 * 1e-3, 4 * 1e-3);
   const MatrixXd inertia = inertia_diag.asDiagonal();
   const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
   const VectorXd constr_vec_u = VectorXd::Zero(0);
 
-  std::shared_ptr<DynamicalSystem> sys = std::make_shared<Quadrotor>(mass, inertia, constr_mat_u, constr_vec_u);
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<Quadrotor>(mass, inertia, constr_mat_u, constr_vec_u);
   VectorXd x(nx);
   x.head<6>() = VectorXd::Random(6);
   MatrixXd R(3, 3);
@@ -231,11 +229,12 @@ TEST(DynamicalSystemTest, Quadrotor) {
 TEST(DynamicalSystemTest, QuadrotorReduced) {
   const int nx = 3 + 3 + 9;
   const int nu = 1 + 3;
-  const double mass = 0.5; // [kg].
+  const double mass = 0.5;  // [kg].
   const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
   const VectorXd constr_vec_u = VectorXd::Zero(0);
 
-  std::shared_ptr<DynamicalSystem> sys = std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
   VectorXd x(nx);
   x.head<6>() = VectorXd::Random(6);
   MatrixXd R(3, 3);
@@ -251,4 +250,4 @@ TEST(DynamicalSystemTest, QuadrotorReduced) {
   EXPECT_PRED_FORMAT4(AssertDynamicsEQ, vf, vf_numerical, x_copy, 1e-3);
 }
 
-} // namespace
+}  // namespace
