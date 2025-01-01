@@ -31,6 +31,7 @@ StaticPolytope<nz_>::StaticPolytope(const MatrixXd& A, const VectorXd& b,
   assert(A.rows() == b.rows());
   assert(A.cols() == kNz);
   assert(A.rows() >= 1);
+  assert(p.rows() == kNz);
   assert(sc_modulus >= 0);
 
   for (int i = 0; i < A.rows(); ++i) {

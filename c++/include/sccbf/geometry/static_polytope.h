@@ -47,7 +47,7 @@ class StaticPolytope : public ConvexSet {
 
   MatrixXd A_;
   VectorXd b_;
-  const VectorXd& p_;
+  const VectorXd p_;
   const double sc_modulus_;
   const int nr_;
   bool strongly_convex_;
