@@ -79,7 +79,7 @@ void QuadrotorDownwash::LieDerivatives(const VectorXd& x, const VectorXd& z,
   const auto zb = R.transpose() * (z - p);
 
   VectorXd softmax(A_.rows());
-  const double lse = LogSumExp(A_ * zb - b_, softmax);
+  LogSumExp(A_ * zb - b_, softmax);
   const auto grad = A_.transpose() * softmax;
 
   for (int i = 0; i < fg.cols(); ++i) {

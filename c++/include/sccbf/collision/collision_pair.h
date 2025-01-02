@@ -26,6 +26,8 @@ class CollisionPair {
 
   bool MinimumDistance();
 
+  double MinimumDistanceDerivative();
+
   double KktStep();
 
   double KktError(VectorXd& dual_inf_err, VectorXd& prim_inf_err,

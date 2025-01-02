@@ -3,16 +3,15 @@
 #include <Eigen/Core>
 #include <memory>
 
+#include "quadrotor_corridor.h"
+#include "quadrotor_downwash.h"
+#include "quadrotor_shape.h"
+#include "quadrotor_uncertainty.h"
 #include "sccbf/data_types.h"
 #include "sccbf/geometry/convex_set.h"
+#include "sccbf/system/quadrotor_reduced.h"
 #include "sccbf/utils/matrix_utils.h"
 #include "sccbf/utils/numerical_derivatives.h"
-
-#include "sccbf/system/quadrotor_reduced.h"
-#include "quadrotor_shape.h"
-#include "quadrotor_downwash.h"
-#include "quadrotor_corridor.h"
-#include "quadrotor_uncertainty.h"
 
 namespace {
 
@@ -25,8 +24,7 @@ struct Variables {
   VectorXd z;
   VectorXd y;
 
-  Variables(int nx, int nz, int nr)
-      : x(nx), dx(nx), z(nz), y(nr) {}
+  Variables(int nx, int nz, int nr) : x(nx), dx(nx), z(nz), y(nr) {}
 };
 
 Variables RandomVariables(const ConvexSet& set) {
@@ -139,7 +137,7 @@ const double kDerivativeErrorTol = 1e-3;
 
 // QuadrotorShape test
 TEST(GeometryTest, QuadrotorShape) {
-  const double pow = 2.0;
+  const double pow = 2.5;
   const Eigen::Vector4d coeff(1.0, 1.0, 0.4, 0.3);
   const double margin = 0;
   auto set = QuadrotorShape(pow, coeff, margin);
@@ -156,11 +154,12 @@ TEST(GeometryTest, QuadrotorShape) {
 
   // Lie derivative test.
   const int nu = 4;
-  const double mass = 0.5; // [kg].
+  const double mass = 0.5;  // [kg].
   const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
   const VectorXd constr_vec_u = VectorXd::Zero(0);
 
-  std::shared_ptr<DynamicalSystem> sys = std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
   VectorXd f(15);
   MatrixXd g(15, nu);
   sys->Dynamics(var.x, f, g);
@@ -178,11 +177,11 @@ TEST(GeometryTest, QuadrotorShape) {
 // QuadrotorDownwash test
 TEST(GeometryTest, QuadrotorDownwash) {
   MatrixXd A(5, 3);
-  A << 4.0, 0.0, 2.0,
-       0.0, 4.0, 2.0,
-      -4.0, 0.0, 2.0,
-       0.0,-4.0, 2.0,
-       0.0, 0.0,-1.5;
+  A << 4.0, 0.0, 2.0,  //
+      0.0, 4.0, 2.0,   //
+      -4.0, 0.0, 2.0,  //
+      0.0, -4.0, 2.0,  //
+      0.0, 0.0, -1.5;
   const VectorXd b = VectorXd::Zero(5);
   const double level = 1.5;
   const double margin = 0;
@@ -200,11 +199,12 @@ TEST(GeometryTest, QuadrotorDownwash) {
 
   // Lie derivative test.
   const int nu = 4;
-  const double mass = 0.5; // [kg].
+  const double mass = 0.5;  // [kg].
   const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
   const VectorXd constr_vec_u = VectorXd::Zero(0);
 
-  std::shared_ptr<DynamicalSystem> sys = std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
   VectorXd f(15);
   MatrixXd g(15, nu);
   sys->Dynamics(var.x, f, g);
@@ -221,9 +221,9 @@ TEST(GeometryTest, QuadrotorDownwash) {
 
 // QuadrotorCorridor test
 TEST(GeometryTest, QuadrotorCorridor) {
-  const double stop_time = 2.0; // [s].
-  const double orientation_cost = 1.0; // [s].
-  const double max_vel = 1.0; // ]m/s].
+  const double stop_time = 2.0;         // [s].
+  const double orientation_cost = 1.0;  // [s].
+  const double max_vel = 1.0;           // [m/s].
   const double margin = 0;
   auto set = QuadrotorCorridor(stop_time, orientation_cost, max_vel, margin);
 
@@ -239,11 +239,12 @@ TEST(GeometryTest, QuadrotorCorridor) {
 
   // Lie derivative test.
   const int nu = 4;
-  const double mass = 0.5; // [kg].
+  const double mass = 0.5;  // [kg].
   const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
   const VectorXd constr_vec_u = VectorXd::Zero(0);
 
-  std::shared_ptr<DynamicalSystem> sys = std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
   VectorXd f(15);
   MatrixXd g(15, nu);
   sys->Dynamics(var.x, f, g);
@@ -280,11 +281,12 @@ TEST(GeometryTest, QuadrotorUncertainty) {
 
   // Lie derivative test.
   const int nu = 4;
-  const double mass = 0.5; // [kg].
+  const double mass = 0.5;  // [kg].
   const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
   const VectorXd constr_vec_u = VectorXd::Zero(0);
 
-  std::shared_ptr<DynamicalSystem> sys = std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
   VectorXd f(15);
   MatrixXd g(15, nu);
   sys->Dynamics(var.x, f, g);

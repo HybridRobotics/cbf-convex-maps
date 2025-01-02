@@ -63,6 +63,19 @@ bool CollisionPair::MinimumDistance() {
   return solved;
 }
 
+double CollisionPair::MinimumDistanceDerivative() {
+  const auto z1 = z_opt_.head(nz1_);
+  const auto z2 = z_opt_.tail(nz2_);
+  const auto lambda1 = lambda_opt_.head(nr1_);
+  const auto lambda2 = lambda_opt_.tail(nr2_);
+
+  const DerivativeFlags flag = DerivativeFlags::f_x;
+  const Derivatives& d1 = C1_->UpdateDerivatives(z1, lambda1, flag);
+  const Derivatives& d2 = C2_->UpdateDerivatives(z2, lambda2, flag);
+
+  return lambda1.dot(d1.f_x) + lambda2.dot(d2.f_x);
+}
+
 double CollisionPair::KktStep() {
   VectorXd z_t(nz_);
   VectorXd lambda_t(nr_);

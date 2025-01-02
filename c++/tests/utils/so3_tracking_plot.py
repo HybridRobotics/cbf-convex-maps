@@ -95,8 +95,10 @@ def _plot_so3pd_tracking_data(filename: str):
 
 
 if __name__ == "__main__":
-    filename = _DIR_PATH + "/so3pd_tracking_test_data.csv"
+    relative_path = "/../../build"
+
+    filename = _DIR_PATH + relative_path + "/so3pd_tracking_test_data.csv"
     _plot_so3pd_tracking_data(filename)
 
-    filename = _DIR_PATH + "/so3p_tracking_test_data.csv"
+    filename = _DIR_PATH + relative_path + "/so3p_tracking_test_data.csv"
     _plot_so3p_tracking_data(filename)
