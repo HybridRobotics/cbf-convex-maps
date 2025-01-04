@@ -29,12 +29,27 @@ def _read_logs(filename: str) -> dict:
     log["prim_inf_err_norm"] = []
     log["compl_err_norm"] = []
 
+    num_opt_solves = 0
+    nr = 0
+    data_start = 0
+    A, b = np.empty((0, 3)), np.empty((0,))
     with open(filename, "r") as file:
         reader = csv.reader(file, delimiter=",")
         for k, row in enumerate(reader):
+            # Headers
             if k == 0:
-                # Header
                 num_opt_solves = float(row[-1])
+                continue
+            elif k == 1:
+                nr = int(row[-1])
+                data_start = 3 + nr
+                A, b = np.zeros((nr, 3)), np.zeros((nr,))
+                continue
+            elif k < data_start:
+                if k == data_start - 1:
+                    continue
+                A[k - 2, :] = np.array([float(row[i]) for i in range(3)])
+                b[k - 2] = float(row[-1])
                 continue
             # Data
             rowf = [float(value) for value in row]
@@ -49,6 +64,8 @@ def _read_logs(filename: str) -> dict:
         log[key] = np.array(log[key])
     log["x"] = log["x"].T
     log["num_opt_solves"] = num_opt_solves
+    log["A"] = A
+    log["b"] = b
     log["t_0"] = log["t_seq"][0]
     log["T"] = log["t_seq"][-1]
     log["dt"] = log["t_seq"][1] - log["t_0"]
@@ -109,7 +126,9 @@ def _print_statistics(log: dict) -> None:
     print(f"Complementarity error (max)     : {compl_err_max:7.3f}")
 
     # Fraction of ipopt solves.
-    frac_opt = log["num_opt_solves"] / len(log["t_seq"])
+    num_opt_solves = int(log["num_opt_solves"])
+    frac_opt = num_opt_solves / len(log["t_seq"])
+    print(f"Number of ipopt solves  : {num_opt_solves:5d}")
     print(f"Fraction of ipopt solves: {frac_opt:5.3f}")
 
     # Tracking error.
@@ -201,7 +220,7 @@ def _plot_data(log: dict):
         edgecolor="black",
     )
     ax.tick_params(axis="both", which="major", labelsize=font_size)
-    # ax.set_xticks([0, 0.3, 0.6, 0.9])
+    # ax.set_xticks([])
     ax.yaxis.set_major_locator(mpl.ticker.LogLocator(base=10, numticks=3))
     ax.yaxis.set_minor_locator(
         mpl.ticker.LogLocator(base=10, subs=np.linspace(0.2, 1, 5), numticks=50)
@@ -241,12 +260,6 @@ def _plot_data(log: dict):
         edgecolor="black",
     )
     ax.tick_params(axis="both", which="major", labelsize=font_size)
-    # ax.set_xticks([0, 0.3, 0.6, 0.9])
-    # ax.yaxis.set_major_locator(mpl.ticker.LogLocator(base=10, numticks=3))
-    # ax.yaxis.set_minor_locator(
-    #     mpl.ticker.LogLocator(base=10, subs=np.linspace(0.2, 1, 5), numticks=50)
-    # )
-    # ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     ax.margins(axis_margins, axis_margins)
     ax.set_ylim([0, 4e-4])
 
@@ -282,12 +295,6 @@ def _plot_data(log: dict):
         edgecolor="black",
     )
     ax.tick_params(axis="both", which="major", labelsize=font_size)
-    # ax.set_xticks([0, 0.3, 0.6, 0.9])
-    # ax.yaxis.set_major_locator(mpl.ticker.LogLocator(base=10, numticks=3))
-    # ax.yaxis.set_minor_locator(
-    #     mpl.ticker.LogLocator(base=10, subs=np.linspace(0.2, 1, 5), numticks=50)
-    # )
-    # ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     ax.margins(axis_margins, axis_margins)
     ax.set_ylim([-1e-2, 5e-2])
 

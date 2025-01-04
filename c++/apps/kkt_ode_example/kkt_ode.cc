@@ -19,10 +19,7 @@
 #include "sccbf/transformation/minkowski.h"
 // Systems
 #include "sccbf/system/dynamical_system.h"
-#include "sccbf/system/quadrotor.h"
 #include "sccbf/system/quadrotor_reduced.h"
-// LCP solver
-#include "sccbf/lemke.h"
 // Solver
 #include "sccbf/collision/collision_pair.h"
 #include "sccbf/collision/distance_solver.h"
@@ -38,6 +35,8 @@ namespace {
 const double kPi = static_cast<double>(EIGEN_PI);
 
 struct Environment {
+  // Obstacle polytope
+  MatrixXd obstacle;
   // Collision pair for geometries
   std::shared_ptr<CollisionPair> cp;
   // System (reduced quadrotor model)
@@ -89,17 +88,28 @@ void Environment::UpdateSystemState(const VectorXd& u, double dt) {
   sys->IntegrateDynamics(u, dt);
 }
 
-std::shared_ptr<ConvexSet> GetObstacle() {
+std::shared_ptr<ConvexSet> GetObstacle(MatrixXd& Ab) {
   const int nz = 3;
   const int nr = nz * 5;
   const VectorXd center = VectorXd::Zero(nz);
   const double in_radius = nz * 0.5;  // [m]
+  const double half_side_len = 3.0;   // [m]
   const double margin = 0.05;         // [m]
   const double sc_modulus = 0.0;
 
-  MatrixXd A(nr, nz);
-  VectorXd b(nr);
-  RandomPolytope(center, in_radius, A, b);
+  MatrixXd A_(nr, nz);
+  VectorXd b_(nr);
+  RandomPolytope(center, in_radius, A_, b_);
+  MatrixXd A(nr + 6, nz);
+  VectorXd b(nr + 6);
+  A.topRows(nr) = A_;
+  A.middleRows<3>(nr) = MatrixXd::Identity(3, 3);
+  A.bottomRows<3>() = -MatrixXd::Identity(3, 3);
+  b.head(nr) = b_;
+  b.tail<6>() = half_side_len * VectorXd::Ones(6);
+  Ab.resize(nr + 6, nz + 1);
+  Ab.leftCols(nz) = A;
+  Ab.col(nz) = b;
   return std::make_shared<StaticPolytope<3>>(A, b, center, margin, sc_modulus,
                                              true);
 }
@@ -165,7 +175,8 @@ void SetupEnvironment(int type, double dt, Environment& env) {
   std::srand(10);
 
   // Set obstacle (static polytope)
-  const auto c1 = GetObstacle();
+  MatrixXd Ab;
+  const auto c1 = GetObstacle(Ab);
   VectorXd x = VectorXd::Zero(0);
   c1->set_states(x, x);
   // Set quadrotor safe region (depending on type)
@@ -193,6 +204,7 @@ void SetupEnvironment(int type, double dt, Environment& env) {
   env.cp = cp;
   env.sys = sys;
   env.opt = opt;
+  env.obstacle = Ab;
 }
 
 struct Trajectory {
@@ -283,6 +295,7 @@ struct Logs {
   VectorXd prim_inf_err_norm;
   VectorXd compl_err_norm;
   int num_opt_solves;
+  MatrixXd obstacle;
 
   Logs(int Nlog, int nx, int nz, int nr)
       : t(Nlog),
@@ -306,82 +319,98 @@ struct Logs {
         num_opt_solves{0} {}
 
   void UpdateOdeLogs(int i, const Environment& env, double kkt_err,
-                     double solve_time) {
-    const int Nlog = static_cast<int>(t.rows());
-    assert((i >= 0) && (i < Nlog));
-    const int nz = static_cast<int>(z_ode_.rows());
-    const int nr = static_cast<int>(lambda_ode_.rows());
-    VectorXd z(nz), lambda(nr);
-    VectorXd dual_inf_err(nz), prim_inf_err(nr), compl_err(nr);
+                     double solve_time);
 
-    x.col(i) = env.sys->x();
-    solve_time_ode(i) = solve_time;
-    dist2_ode(i) = env.cp->get_kkt_solution(z, lambda);
-    Ddist2_ode(i) = env.cp->MinimumDistanceDerivative();
-    z_ode_.col(i) = z;
-    lambda_ode_.col(i) = lambda;
-    env.cp->KktError(dual_inf_err, prim_inf_err, compl_err);
-    dual_inf_err_norm(i) = dual_inf_err.lpNorm<Eigen::Infinity>();
-    prim_inf_err_norm(i) = prim_inf_err.lpNorm<Eigen::Infinity>();
-    compl_err_norm(i) = compl_err.lpNorm<Eigen::Infinity>();
+  void UpdateOptLogs(int i, const Environment& env, double solve_time);
 
-    if (env.opt->kkt_ode.use_kkt_err_tol)
-      num_opt_solves += (kkt_err > env.opt->kkt_ode.max_inf_kkt_err);
-    else
-      num_opt_solves += (kkt_err > env.opt->kkt_ode.max_primal_dual_gap);
-  }
+  void ComputeErrorNorms();
 
-  void UpdateOptLogs(int i, const Environment& env, double solve_time) {
-    const int Nlog = static_cast<int>(t.rows());
-    assert((i >= 0) && (i < Nlog));
-    const int nz = static_cast<int>(z_ode_.rows());
-    const int nr = static_cast<int>(lambda_ode_.rows());
-    VectorXd z(nz), lambda(nr);
-
-    solve_time_opt(i) = solve_time;
-    dist2_opt(i) = env.cp->get_kkt_solution(z, lambda);
-    z_opt_.col(i) = z;
-    z_opt_norm(i) = z.norm();
-    lambda_opt_.col(i) = lambda;
-    lambda_opt_norm(i) = lambda.norm();
-  }
-
-  void ComputeErrorNorms() {
-    const int Nlog = static_cast<int>(t.rows());
-
-    for (int i = 0; i < Nlog; ++i) {
-      z_err_norm(i) = (z_ode_.col(i) - z_opt_.col(i)).norm();
-      lambda_err_norm(i) = (lambda_ode_.col(i) - lambda_opt_.col(i)).norm();
-    }
-  }
-
-  void SaveLogs(std::ofstream& outfile) {
-    const int Nlog = static_cast<int>(t.rows());
-    const int nx = static_cast<int>(x.rows());
-
-    // Header
-    outfile << "t (s),";
-    for (int i = 0; i < nx; ++i) outfile << "x_" << i << ",";
-    outfile << "solve time (ode) (s),solve time (opt) (s),"
-            << "dist2 (ode) (m^2),dist2 (opt) (m^2),"
-            << "D(dist2) (ode) (m^2/s),"
-            << "|z_opt - z_ode|,|z_opt|,|lambda_opt - lambda_ode|,|lambda_opt|,"
-            << "dual inf err,primal inf err,complementarity err,"
-            << "#ipopt solves=," << num_opt_solves << std::endl;
-
-    // Data
-    for (int k = 0; k < Nlog; ++k) {
-      outfile << t(k) << ",";
-      for (int i = 0; i < nx; ++i) outfile << x(i, k) << ",";
-      outfile << solve_time_ode(k) << "," << solve_time_opt(k) << ","
-              << dist2_ode(k) << "," << dist2_opt(k) << "," << Ddist2_ode(k)
-              << "," << z_err_norm(k) << "," << z_opt_norm(k) << ","
-              << lambda_err_norm(k) << "," << lambda_opt_norm(k) << ","
-              << dual_inf_err_norm(k) << "," << prim_inf_err_norm(k) << ","
-              << compl_err_norm(k) << std::endl;
-    }
-  }
+  void SaveLogs(std::ofstream& outfile);
 };
+
+void Logs::UpdateOdeLogs(int i, const Environment& env, double kkt_err,
+                         double solve_time) {
+  const int Nlog = static_cast<int>(t.rows());
+  assert((i >= 0) && (i < Nlog));
+  const int nz = static_cast<int>(z_ode_.rows());
+  const int nr = static_cast<int>(lambda_ode_.rows());
+  VectorXd z(nz), lambda(nr);
+  VectorXd dual_inf_err(nz), prim_inf_err(nr), compl_err(nr);
+
+  x.col(i) = env.sys->x();
+  solve_time_ode(i) = solve_time;
+  dist2_ode(i) = env.cp->get_kkt_solution(z, lambda);
+  Ddist2_ode(i) = env.cp->MinimumDistanceDerivative();
+  z_ode_.col(i) = z;
+  lambda_ode_.col(i) = lambda;
+  env.cp->KktError(dual_inf_err, prim_inf_err, compl_err);
+  dual_inf_err_norm(i) = dual_inf_err.lpNorm<Eigen::Infinity>();
+  prim_inf_err_norm(i) = prim_inf_err.lpNorm<Eigen::Infinity>();
+  compl_err_norm(i) = compl_err.lpNorm<Eigen::Infinity>();
+
+  if (env.opt->kkt_ode.use_kkt_err_tol)
+    num_opt_solves += (kkt_err > env.opt->kkt_ode.max_inf_kkt_err);
+  else
+    num_opt_solves += (kkt_err > env.opt->kkt_ode.max_primal_dual_gap);
+}
+
+void Logs::UpdateOptLogs(int i, const Environment& env, double solve_time) {
+  const int Nlog = static_cast<int>(t.rows());
+  assert((i >= 0) && (i < Nlog));
+  const int nz = static_cast<int>(z_ode_.rows());
+  const int nr = static_cast<int>(lambda_ode_.rows());
+  VectorXd z(nz), lambda(nr);
+
+  solve_time_opt(i) = solve_time;
+  dist2_opt(i) = env.cp->get_kkt_solution(z, lambda);
+  z_opt_.col(i) = z;
+  z_opt_norm(i) = z.norm();
+  lambda_opt_.col(i) = lambda;
+  lambda_opt_norm(i) = lambda.norm();
+}
+
+void Logs::ComputeErrorNorms() {
+  const int Nlog = static_cast<int>(t.rows());
+
+  for (int i = 0; i < Nlog; ++i) {
+    z_err_norm(i) = (z_ode_.col(i) - z_opt_.col(i)).norm();
+    lambda_err_norm(i) = (lambda_ode_.col(i) - lambda_opt_.col(i)).norm();
+  }
+}
+
+void Logs::SaveLogs(std::ofstream& outfile) {
+  const int Nlog = static_cast<int>(t.rows());
+  const int nx = static_cast<int>(x.rows());
+
+  // Header
+  outfile << "#ipopt solves," << num_opt_solves << std::endl;
+  const int nr = obstacle.rows();
+  outfile << "obstacle polytope: nr," << nr << std::endl;
+  const auto Ab = obstacle;
+  for (int i = 0; i < nr; ++i) {
+    outfile << Ab(i, 0) << "," << Ab(i, 1) << "," << Ab(i, 2) << "," << Ab(i, 3)
+            << std::endl;
+  }
+  outfile << "t (s),";
+  for (int i = 0; i < nx; ++i) outfile << "x_" << i << ",";
+  outfile << "solve time (ode) (s),solve time (opt) (s),"
+          << "dist2 (ode) (m^2),dist2 (opt) (m^2),"
+          << "D(dist2) (ode) (m^2/s),"
+          << "|z_opt - z_ode|,|z_opt|,|lambda_opt - lambda_ode|,|lambda_opt|,"
+          << "dual inf err,primal inf err,complementarity err" << std::endl;
+
+  // Data
+  for (int k = 0; k < Nlog; ++k) {
+    outfile << t(k) << ",";
+    for (int i = 0; i < nx; ++i) outfile << x(i, k) << ",";
+    outfile << solve_time_ode(k) << "," << solve_time_opt(k) << ","
+            << dist2_ode(k) << "," << dist2_opt(k) << "," << Ddist2_ode(k)
+            << "," << z_err_norm(k) << "," << z_opt_norm(k) << ","
+            << lambda_err_norm(k) << "," << lambda_opt_norm(k) << ","
+            << dual_inf_err_norm(k) << "," << prim_inf_err_norm(k) << ","
+            << compl_err_norm(k) << std::endl;
+  }
+}
 
 }  // namespace
 
@@ -413,6 +442,7 @@ int main() {
   const int nr = env.cp->get_set1()->nr() + env.cp->get_set2()->nr();
   Logs log(Nlog, nx, nz, nr);
   log.t = VectorXd::LinSpaced(Nlog, t_0, T);
+  log.obstacle = env.obstacle;
 
   // KKT ODE solution
   auto start = std::chrono::high_resolution_clock::now();
