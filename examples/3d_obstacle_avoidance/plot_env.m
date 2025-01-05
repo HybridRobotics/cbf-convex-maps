@@ -7,7 +7,7 @@ function [til] = plot_env(robots, logs)
     til.TileSpacing = "tight";
     til.Padding = "tight";
     til.TileIndexing = "rowmajor"; % (default).
-    
+
     %% First tile - Initial snapshot.
     nrobots = numel(robots);
     nT = logs.nT;

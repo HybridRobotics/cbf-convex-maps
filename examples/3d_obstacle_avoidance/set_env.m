@@ -7,7 +7,7 @@ function [robots, xf, tracking_clf] = set_env()
     ALPHA_P = 0.5; % 0.5, 1
 
     rng(1,"twister");
-    
+
     % Assign dynamics.
     systems = cell(2 * NROBOTS, 1);
     xf = cell(2 * NROBOTS, 1);
@@ -16,7 +16,7 @@ function [robots, xf, tracking_clf] = set_env()
         p0 = [R * i1; R * i2; R * i3];
         sep_p = [SEP; 0; 0];
         R0 = eye(3);
-        
+
         if i <= NROBOTS
             x0 = [p0 - sep_p; zeros(3, 1); R0(:)];
             xf{i} = [p0 + sep_p; zeros(3, 1); R0(:)];
@@ -31,7 +31,7 @@ function [robots, xf, tracking_clf] = set_env()
         % systems{i}.check_system();
     end
     disp('Assigned dynamics');
-    
+
     % Assign convex sets.
     sets = cell(2 * NROBOTS, 1);
     for i = 1:2*NROBOTS
@@ -69,7 +69,7 @@ function [robots, xf, tracking_clf] = set_env()
         sets{i} = sets{i}.plot_surf(systems{i}.x, ax, 'r', 1, []);
     end
     axis equal
-    
+
     % Set robots.
     robots = cell(2 * NROBOTS, 1);
     for i = 1:2*NROBOTS

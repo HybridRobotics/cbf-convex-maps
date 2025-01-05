@@ -15,7 +15,7 @@ The technical paper corresponding to this repository is in review.
 - [Optimization Toolbox](https://www.mathworks.com/products/optimization.html)
 - [Multi-Parametric Toolbox](https://www.mpt3.org/)
 - [Symbolic Math Toolbox](https://www.mathworks.com/products/symbolic.html) (Optional)
-- Stable Log-Sum-Exp function (included in the code) (see P. Blanchard, D. J. Higham, and N. J. Higham, [Computing the Log-Sum-Exp and Softmax Functions.](https://doi.org/10.1093/imanum/draa038) 
+- Stable Log-Sum-Exp function (included in the code) (see P. Blanchard, D. J. Higham, and N. J. Higham, [Computing the Log-Sum-Exp and Softmax Functions.](https://doi.org/10.1093/imanum/draa038)
 IMA J. Numer. Anal., Advance access, 2020.)
 
 ### Usage

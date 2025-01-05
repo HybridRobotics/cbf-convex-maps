@@ -4,14 +4,14 @@ function [] = print_constraints(A, l, u, sep_line_width)
     % A can be a sparse matrix.
     A_d = full(A);
     n_rows = size(A_d, 1);
-    
+
     if isempty(l)
         l = -Inf * ones(n_rows, 1);
     end
     if isempty(u)
         u = Inf * ones(n_rows, 1);
     end
-    
+
     assert (isequal(size(l), [n_rows, 1]));
     assert (isequal(size(u), [n_rows, 1]));
 
@@ -20,7 +20,7 @@ function [] = print_constraints(A, l, u, sep_line_width)
     l_str = num2str(l);
     u_str = num2str(u);
     ineq_str = [l_str, sep_mat, A_str, sep_mat, u_str];
-    
+
     if nargin < 4
         sep_line_width = size(ineq_str, 2);
     end

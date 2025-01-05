@@ -66,7 +66,7 @@ function [] = display_static_polytope(p)
     disp(' ');
 end
 
-%% Projection matrix for (\dot{p}, \dot{R}) onto T_{(p,R)}. 
+%% Projection matrix for (\dot{p}, \dot{R}) onto T_{(p,R)}.
 % SE(3)\dot{R} is projected as (\dot{R} - R \dot{R}^T R)/2.
 function [Pi_T_x] = proj_se3(Rot)
     R = sym('R', [9 1]);
@@ -76,6 +76,6 @@ function [Pi_T_x] = proj_se3(Rot)
     sym_proj = 1/2 * (V - R * V' * R);
     sym_proj_vectorized = jacobian(sym_proj(:), V(:));
     proj_vectorized = double(subs(sym_proj_vectorized, R, Rot));
-    
+
     Pi_T_x = blkdiag(eye(3), proj_vectorized);
 end

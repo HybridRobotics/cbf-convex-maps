@@ -1,6 +1,6 @@
 function [V] = get_mesh_points(C, x, nstep, npts)
     % Find mesh points on the surface of a 3d convex set.
-    % 
+    %
     % Inputs:
     %   C: Convex set, C.radius and C.center should be defined.
     %   x: State of C.
@@ -8,7 +8,7 @@ function [V] = get_mesh_points(C, x, nstep, npts)
     %   npts: Number of points on each contour.
     % Outputs:
     %   V: [npts, nz, nstep, nz] matrix of mesh points. 2nd-axis is the dim.
-    
+
     if nargin < 3
         nstep = 3;
         npts = 26;
@@ -24,7 +24,7 @@ function [V] = get_mesh_points(C, x, nstep, npts)
     options.ConstraintTolerance = 1e-6;
     options.OptimalityTolerance = 1e-6;
     options.MaxIterations       = 1e4;
-    
+
     cons = @(z) nonlcon(z, x, C);
 
     % Find end points.
@@ -52,7 +52,7 @@ function [V] = get_mesh_points(C, x, nstep, npts)
     steps = (0:nstep+1) / (nstep + 1);
     steps = steps(2:end-1);
     coords = limit_l * ones(size(steps)) + (limit_u - limit_l) * steps;
-    
+
     % Find mesh points.
     V = zeros(npts, 3, nstep, 3);
     angles = (0:npts-1)' / (npts-1) * 2*pi;
@@ -109,7 +109,7 @@ end
 
 function Hout = hessian_fcn(type, z, x, lambda, C)
     [~,~,~,~, d2Adzz_y] = C.derivatives(x, z, lambda.ineqnonlin);
-    
+
     if strcmp(type, 'end-pts')
         Hout = d2Adzz_y;
     elseif strcmp(type, 'proj')

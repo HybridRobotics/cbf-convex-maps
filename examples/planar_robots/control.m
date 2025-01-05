@@ -1,7 +1,7 @@
 function [U, dist_struct, solve_time] = control(robots, dist_struct, xf, clfs, ...
     dt, a_cbf, a_clf, w_clf, dist_margin)
     persistent U_idx m P_qp q_qp A_qp l_qp u_qp settings
-    
+
     nrobots = numel(robots);
     ncbf = nrobots * (nrobots - 1) / 2;
     nclf = nrobots;
@@ -56,7 +56,7 @@ function [U, dist_struct, solve_time] = control(robots, dist_struct, xf, clfs, .
         A_qp = sparse([A_clf; A_cbf; A_in]);
         l_qp = [l_clf; l_cbf; l_in];
         u_qp = [u_clf; u_cbf; u_in];
-        
+
         m.setup(P_qp, q_qp, A_qp, l_qp, u_qp, settings);
         m.solve();
     end

@@ -40,10 +40,3 @@ x = rnd*ones(n,1);
 [sm7,lse7] = softmax_a(x);
 error_10 = lse7 - log(n*exp(rnd))
 error_11 = norm(sm7 - 1/n,1)
-
-
-
-
-
-
-

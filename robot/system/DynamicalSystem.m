@@ -1,6 +1,6 @@
 classdef (Abstract) DynamicalSystem < handle
     % Abstract dynamical system.
-    % 
+    %
     % x: State variable, x \in R^nx.
     % u: Input variable, u \in U \subset R^nu.
     % Continuous-time dynamics: \dot{x} = f(x) + g(x) u.

@@ -222,4 +222,3 @@ end
 % fig = gcf;
 % print(fig, strcat('../../fig/3d-cbf-env.png'), '-dpng', '-r1000');
 % print(fig, strcat('../../fig/3d-cbf-env.eps'), '-depsc', '-r600');
-

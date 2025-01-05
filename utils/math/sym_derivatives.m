@@ -1,6 +1,6 @@
 function [] = sym_derivatives(A, x, z, params, file_path)
     % Computes derivatives from symbolic function.
-    % 
+    %
     % Inputs:
     %   A: Symbolic real-valued function of x and z.
     %   x: State symbolic variable.
@@ -16,4 +16,3 @@ function [] = sym_derivatives(A, x, z, params, file_path)
     Vars = {x, z, params}, Optimize = true);
     rehash
 end
-

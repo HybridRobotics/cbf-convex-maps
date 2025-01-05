@@ -1,6 +1,6 @@
 classdef DoubleIntegratorSE < DynamicalSystem
     % Double integrator system on SE(3).
-    % 
+    %
     % x: [2*3 + 9, 1] vector: x = (p,v,R).
     % u: [3+3, 1] vector: u = (a,w).
     % \dot{x} = (v, a, R\hat{w}).
@@ -17,11 +17,11 @@ classdef DoubleIntegratorSE < DynamicalSystem
                 Au = [eye(nu); -eye(nu)];
                 bu = [ones(nu, 1); ones(nu, 1)];
             end
-            
+
             obj@DynamicalSystem(nx, nu, Au, bu);
             obj.x = x0;
         end
-        
+
         function [f, g] = dyn(~, x)
             R = reshape(x(7:end), 3, 3);
 

@@ -128,7 +128,7 @@ function [out] = compare_opt_ode(dt, t_seq, x_seq1, C1, x_seq2, C2)
     yopt_ode_seq(:, 1) = yopt_opt_seq(:, 1);
     n_J2e = 0;
     n_opt_solution = 0;
-    
+
     wb = waitbar(0, 'Starting distance ODE');
     for k = 1:nT-1
         x1 = x_seq1(:, k);
@@ -137,7 +137,7 @@ function [out] = compare_opt_ode(dt, t_seq, x_seq1, C1, x_seq2, C2)
         dx2 = (x_seq2(:, k+1) - x_seq2(:, k)) / dt;
         z_opt = zopt_ode_seq(:, k);
         y_opt = yopt_ode_seq(:, k);
-        
+
         tic_ = tic;
         [dist2_ode_seq(k+1), zopt_ode_seq(:, k+1), yopt_ode_seq(:, k+1), o_] = ...
             minimum_distance_step(dt, x1, dx1, C1, x2, dx2, C2, ...

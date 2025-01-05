@@ -9,7 +9,7 @@ function [til] = plot_figure(out, x1, C1, x_seq2, C2, Tf, timestamps)
     til.TileSpacing = "tight";
     til.Padding = "tight";
     til.TileIndexing = "rowmajor"; % (default).
-    
+
     %% First tile - Snapshot.
     ax = nexttile;
     % Plot trajectory.

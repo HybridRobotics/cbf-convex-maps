@@ -1,6 +1,6 @@
 classdef SimpleQuadrotor < DynamicalSystem
     % Simplified quadrotor system.
-    % 
+    %
     % x: [2*3 + 9, 1] vector: x = (p,v,R).
     % u: [1+3, 1] vector: u = (a,w).
     % \dot{x} = (v, R_3*a, R\hat{w}).
@@ -17,11 +17,11 @@ classdef SimpleQuadrotor < DynamicalSystem
                 Au = [eye(nu); -eye(nu)];
                 bu = [ones(nu, 1); ones(nu, 1)];
             end
-            
+
             obj@DynamicalSystem(nx, nu, Au, bu);
             obj.x = x0;
         end
-        
+
         function [f, g] = dyn(~, x)
             R = reshape(x(7:end), 3, 3);
 

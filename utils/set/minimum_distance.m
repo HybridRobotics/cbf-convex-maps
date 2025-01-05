@@ -1,7 +1,7 @@
 function [dist2, z_opt, y_opt, J, out] = ...
     minimum_distance(x1, C1, x2, C2, z0, alg)
     % Minimum distance between convex sets.
-    % 
+    %
     % Inputs:
     %   C1, C2: Convex sets, at least one of them strictly convex.
     %   x1, x2: Parameters for C1 and C2, respectively.
@@ -15,9 +15,9 @@ function [dist2, z_opt, y_opt, J, out] = ...
     %      = struct('J0c', J0c, 'J1', J1, 'J2e', J2e),
     %   out: = struct('run_time', run_time, 'status', status, 'iter', iter).
     EPS = 1e-6; % Margin for index set calculations.
-    
+
     nz = C1.nz; % = C2.nz;
-    
+
     if nargin < 6
         alg = 'interior-point';
     end
@@ -43,7 +43,7 @@ function [dist2, z_opt, y_opt, J, out] = ...
         options.SubproblemAlgorithm = 'factorization';
     end
     options.CheckGradients = false;
-    
+
     % Solve the minimum distance problem.
     dist_opt_start_time = tic;
     [z_opt, dist2, exitflag, output, lambda, ~,~] = ...
@@ -51,12 +51,12 @@ function [dist2, z_opt, y_opt, J, out] = ...
     out.run_time = toc(dist_opt_start_time);
     out.status = exitflag;
     out.iter = output.iterations;
-    
+
     % Extract dual variables and index sets.
     y1 = lambda.ineqnonlin(1:C1.nr);
     y2 = lambda.ineqnonlin(C1.nr+1:end);
     y_opt = [y1; y2];
-    
+
     z1 = z_opt(1:nz);
     z2 = z_opt(nz+1:end);
     % J0c: Inactive primal constraints at z_opt.
@@ -80,7 +80,7 @@ function [c, ceq, GC, GCeq] = nonlcon(z, nz, x1, C1, x2, C2)
     z2 = z(nz+1:end);
     [A1, ~, dAdz1, ~,~] = C1.derivatives(x1, z1, zeros(C1.nr, 1));
     [A2, ~, dAdz2, ~,~] = C2.derivatives(x2, z2, zeros(C2.nr, 1));
-    
+
     c = [A1; A2]';
     ceq = [];
     GC = sparse([dAdz1 zeros(C1.nr, nz); zeros(C2.nr, nz) dAdz2]');
@@ -95,7 +95,7 @@ function H = hessianfcn(z, lambda, nz, x1, C1, x2, C2)
     y2 = y(C1.nr+1:end);
     [~,~,~,~, d2Adzz_y1] = C1.derivatives(x1, z1, y1);
     [~,~,~,~, d2Adzz_y2] = C2.derivatives(x2, z2, y2);
-    
+
     H = [2 * eye(nz) + d2Adzz_y1, -2 * eye(nz);
         -2 * eye(nz), 2 * eye(nz) + d2Adzz_y2];
     H = sparse(H);

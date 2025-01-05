@@ -27,7 +27,7 @@ for i = 1:2
     set = SmoothPolytope4D(P, 1, 5);
     set.radius = 5;
     set.center = [0; 0; 0];
-    
+
     R_ = eye(3);
     x_ = [0; 0; 0; 1; 1; 1; R_(:)];
     set.check_derivatives(x_, [0; 0; 0; 0], 1);
@@ -52,5 +52,3 @@ x_seq2 = [p_seq2; v_seq2; R_(:) * ones(1, nT)];
 
 out = compare_opt_ode(t_seq, x_seq1, C1, x_seq2, C2);
 print_stats(out);
-
-

@@ -1,6 +1,6 @@
 classdef IntegratorSE < DynamicalSystem
     % Integrator system on SE(n), n = 2 or 3.
-    % 
+    %
     % x: [n + n^2, 1] vector.
     % u: [3, 1] vector if n == 2 or [6, 1] vector if n == 3.
     % \dot{x} = u \in T_x SE(n).
@@ -26,12 +26,12 @@ classdef IntegratorSE < DynamicalSystem
                 Au = [eye(nu); -eye(nu)];
                 bu = [ones(nu, 1); ones(nu, 1)];
             end
-            
+
             obj@DynamicalSystem(nx, nu, Au, bu);
             obj.dim = n;
             obj.x = x0;
         end
-        
+
         function [f, g] = dyn(obj, x)
             f = zeros(obj.nx, 1);
             if obj.dim == 2

@@ -3,7 +3,7 @@ function [dz_opt, dy_opt, out] = ...
     % Computes the directional derivatives (dz_opt, dy_opt) of (z_opt,
     % y_opt) along dx.
     % Note: At least one of the convex sets must be strictly convex.
-    % 
+    %
     % Inputs:
     %   x1, x2: Current parameters for C1 and C2.
     %   dx1, dx2: Rate of change of parameters x1 and x2.
@@ -16,7 +16,7 @@ function [dz_opt, dy_opt, out] = ...
     %   out: Struct for additional information.
     EPS = 1e-7; % Margin for index set calculations.
     ALPHA = 10; % Stability constant for the KKT conditions.
-    
+
     nz = C1.nz; % = C2.nz;
     z1 = z_opt(1:nz);
     z2 = z_opt(1+nz:end);
@@ -52,7 +52,7 @@ function [dz_opt, dy_opt, out] = ...
     % z-hessian of the Lagrangian.
     d2Ldzz = [2 * eye(nz) + d2Adzz_y1, -2 * eye(nz);
         -2 * eye(nz), 2 * eye(nz) + d2Adzz_y2];
-    
+
     % Case 1: J2e is empty.
     if isempty(J2e)
         out.J2e = 0;
@@ -98,7 +98,7 @@ function [dz_opt, dy_opt, out] = ...
             dy_opt = zeros(size(y_opt));
             return;
         end
-        
+
         if results.info.status_val == 1
             dz_opt = results.x;
             dy_opt = zeros(size(y_opt));

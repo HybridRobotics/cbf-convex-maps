@@ -1,6 +1,6 @@
 function [dist_struct, logs] = init(robots, t_seq, xf)
     nrobots = numel(robots);
-    
+
     % Initialize distances.
     dist_struct = cell(nrobots, nrobots);
     for i = 1:nrobots

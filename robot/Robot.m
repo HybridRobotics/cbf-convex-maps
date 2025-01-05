@@ -8,12 +8,12 @@ classdef Robot < handle
         nx
         nu
         nz
-        
+
         % Cell of AbstractConvexSet objects.
         sets
         nsets
     end
-    
+
     methods
         function obj = Robot(system, sets)
             obj.system = system;

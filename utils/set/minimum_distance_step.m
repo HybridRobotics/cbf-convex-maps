@@ -14,13 +14,13 @@ function [dist2_new, z_opt_new, y_opt_new, out] = ...
     %   z_opt_new: z_opt after dt time.
     %   y_opt_new: y_opt after dt time.
     MAX_KKT_ERR = 10;
-    
+
     nz = C1.nz; % = C2.nz;
 
     if nargin < 10
         alg = 'euler';
     end
-    
+
     if strcmp(alg, 'euler')
         [dz_opt, dy_opt, out] = ...
             minimum_distance_ode(x1, dx1, C1, x2, dx2, C2, z_opt, y_opt);

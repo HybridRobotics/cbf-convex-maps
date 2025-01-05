@@ -1,10 +1,10 @@
 classdef FlexibleEllipsoid < AbstractConvexSet
     % Ellipsoid in 3d with parameters: (position, orientation).
-    % 
+    %
     % (p, R): (position, orientation).
     % Q: Positive-definite weight matrix.
     % C = {z: (z-p)^T R Q R^T (z-p) <= 1 + 2/pi*0.5 * atan(z(3))}.
-    
+
     properties
         Q
     end
@@ -12,11 +12,11 @@ classdef FlexibleEllipsoid < AbstractConvexSet
     properties (Access = public)
         surf_pts = []
     end
-    
+
     methods
         function obj = FlexibleEllipsoid(Q)
             obj = obj@AbstractConvexSet(12, 3, 1);
-            
+
             assert(isequal(size(Q), [3, 3]));
             try chol(Q);
             catch
@@ -24,20 +24,20 @@ classdef FlexibleEllipsoid < AbstractConvexSet
             end
             obj.Q = Q;
         end
-        
+
         function cons = A(obj, x, z)
             p = x(1:obj.nz);
             % R is vectorized column-first.
             R = reshape(x(obj.nz+1:end), obj.nz, obj.nz);
-            
+
             cons = (z - p)' * R * obj.Q * R' * (z-p) - ...
                 ( 1 + 2/pi * 0.75 * atan(p(3)) );
         end
-        
+
         function [A, dAdx, dAdz, d2Adxz_y, d2Adzz_y] = derivatives(obj, x, z, y)
             p = x(1:obj.nz);
             R = reshape(x(obj.nz+1:end), obj.nz, obj.nz);
-            
+
             % Note: A x = \sum_i A^i x_i = \sum_i (x_i I) A^i,
             %           = kron(x', I) vec(A).
             %       A'y = [y' A^1; y' A^2; ...] = kron(I, y') vec(A).
@@ -51,7 +51,7 @@ classdef FlexibleEllipsoid < AbstractConvexSet
                 y(1) * kron(2 * (z - p)' * R * obj.Q, eye(obj.nz)) + ...
                 y(1) * 2 * R * obj.Q * kron(eye(obj.nz), (z - p)')];
         end
-        
+
         function [obj] = plot_surf(obj, x, hdl, fc, fa, ea)
             p = x(1:obj.nz);
             R = reshape(x(obj.nz+1:end), obj.nz, obj.nz);
@@ -59,7 +59,7 @@ classdef FlexibleEllipsoid < AbstractConvexSet
 
             nsurf = 25;
             step = 5;
-            
+
             if isempty(obj.surf_pts)
                 [v, lambda] = eig(obj.Q);
                 [Xm_, Ym_, Zm_] = ellipsoid(0, 0, 0, lambda(1,1), ...

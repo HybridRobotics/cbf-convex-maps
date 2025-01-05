@@ -1,17 +1,17 @@
 classdef (Abstract) AbstractConvexSet < handle
     % Parametric convex set representation.
-    % 
+    %
     % x: Parameter variable, x \in R^nx.
     % z: Space variable, z \in R^nz.
     % Convex set: C(x) = {z: A(x, z) <= 0_{nr x 1}}.
     % Static convex sets have x = zeros(0, 1).
-    
+
     properties (SetAccess = immutable)
         nx
         nz
         nr
     end
-    
+
     methods (Abstract)
         % Inequality constraints for convex set.
         % Inputs:
@@ -20,7 +20,7 @@ classdef (Abstract) AbstractConvexSet < handle
         % Outputs:
         %   A: [nr, 1] vector.
         A(obj, x, z)
-        
+
         % Derivaties of constraints.
         % Inputs:
         %   x: [nx, 1] vector, Parameter variable.
@@ -40,21 +40,21 @@ classdef (Abstract) AbstractConvexSet < handle
         %       D_zz A(x, z) . y = \sum_{i=1}^{nr} y_i . hess_z A_i(x, z).
         derivatives(obj, x, z, y)
     end
-    
+
     methods (Access = public)
         function obj = AbstractConvexSet(nx, nz, nr)
             obj.nx = nx;
             obj.nz = nz;
             obj.nr = nr;
         end
-        
+
         function [] = check_dims(obj, x_test)
             disp(['Class: ' class(obj) ' < ' ...
                 strjoin(superclasses(class(obj)), ', ') ':']);
             disp(['Num of constraints: ' num2str(obj.nr)]);
             disp(['Parameter dim: [' num2str(obj.nx) ', 1]']);
             disp(['Space dim    : [' num2str(obj.nz) ', 1]']);
-            
+
             if nargin < 2
                 x_test = zeros(obj.nx, 1);
             end
@@ -84,7 +84,7 @@ classdef (Abstract) AbstractConvexSet < handle
                     'got [' num2str(size(d2Adzz_y)) ']']);
             end
         end
-        
+
         function [] = check_derivatives(obj, x_test, z_test, y_test, Pi_T_x)
             % Inputs:
             %   x_test, z_test, y_test: Test points at which derivatives
@@ -104,7 +104,7 @@ classdef (Abstract) AbstractConvexSet < handle
             if nargin < 2 || isempty(x_test)
                 x_test = zeros(obj.nx, 1);
             end
-            
+
             function [f, df] = x_deriv(obj, x_test, z_test, y_test)
                 [f, df, ~,~,~] = obj.derivatives(x_test, z_test, y_test);
             end
@@ -123,7 +123,7 @@ classdef (Abstract) AbstractConvexSet < handle
             z_deriv_hdl = @(z) z_deriv(obj, x_test, z, y_test);
             xz_deriv_hdl = @(x) xz_deriv(obj, x, z_test, y_test);
             zz_deriv_hdl = @(z) zz_deriv(obj, x_test, z, y_test);
-            
+
             rng default;
             tolerance = 1e-6; % (default)
             opts = optimoptions('fmincon', FiniteDifferenceType = 'central', ...

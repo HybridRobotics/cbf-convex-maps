@@ -104,12 +104,12 @@ if(NOT WIN32)
 
     set(IPOPT_DEFINITIONS "")
 
-  
-  # if IPOPT_DIR not set, try finding IPOPT through package manager  
+
+  # if IPOPT_DIR not set, try finding IPOPT through package manager
   else()
     find_package(PkgConfig QUIET)
     if(PKG_CONFIG_FOUND)
-    
+
       if(IPOPT_FIND_VERSION)
         if(IPOPT_FIND_VERSION_EXACT)
           pkg_check_modules(_PC_IPOPT REQUIRED ipopt=${IPOPT_FIND_VERSION})
@@ -119,8 +119,8 @@ if(NOT WIN32)
       else()
         pkg_check_modules(_PC_IPOPT REQUIRED ipopt)
       endif()
-    
-    
+
+
       if(_PC_IPOPT_FOUND)
         set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
         set(IPOPT_DEFINITIONS ${_PC_IPOPT_CFLAGS_OTHER} CACHE STRING "Additional compiler flags for IPOPT")
@@ -139,7 +139,7 @@ if(NOT WIN32)
       endif()
     endif()
   endif()
-  
+
   set(IPOPT_LINK_FLAGS "")
 
 # Windows platforms

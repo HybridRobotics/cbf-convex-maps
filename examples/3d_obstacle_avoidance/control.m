@@ -1,7 +1,7 @@
 function [U, dist_struct, solve_time, out] = control(robots, dist_struct, xf, ...
     clf, vmax, dt, a_hcbf, a_vcbf, a_clf, w_clf, dist_margin)
     persistent U_idx m P_qp q_qp A_qp l_qp u_qp settings
-    
+
     nrobots = numel(robots);
     nhcbf = nrobots * (nrobots - 1) / 2;
     nvcbf = 6 * nrobots;
@@ -23,7 +23,7 @@ function [U, dist_struct, solve_time, out] = control(robots, dist_struct, xf, ..
         P_qp = 2 * blkdiag(eye(U_idx(end)), w_clf * eye(nclf));
         P_qp = sparse(P_qp);
         q_qp = zeros(nvars, 1);
-        
+
         % A_qp = [A_clf, A_vcbf, A_hcbf, A_in].
         A_clf = zeros(nclf, nvars);
         l_clf = -Inf * ones(nclf, 1);
@@ -67,7 +67,7 @@ function [U, dist_struct, solve_time, out] = control(robots, dist_struct, xf, ..
         A_qp = sparse([A_clf; A_vcbf; A_hcbf; A_in]);
         l_qp = [l_clf; l_vcbf; l_hcbf; l_in];
         u_qp = [u_clf; u_vcbf; u_hcbf; u_in];
-        
+
         m.setup(P_qp, q_qp, A_qp, l_qp, u_qp, settings);
         m.solve();
     end

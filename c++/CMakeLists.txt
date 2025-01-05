@@ -72,4 +72,3 @@ if (BUILD_DOCS)
     message(STATUS "Doxygen not found; not building docs")
   endif()
 endif()
-

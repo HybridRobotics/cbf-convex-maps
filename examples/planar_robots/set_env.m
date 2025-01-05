@@ -3,7 +3,7 @@ function [robots, xf, clfs] = set_env()
     R = 9;
 
     rng(1,"twister");
-    
+
     % Assign dynamics.
     systems = cell(nrobots, 1);
     xf = cell(nrobots, 1);
@@ -63,7 +63,7 @@ function [robots, xf, clfs] = set_env()
         hold on
         sets{i} = sets{i}.plot_surf(systems{i}.x, ax, 'r', 1, []);
     end
-    
+
     % Set robots.
     robots = cell(nrobots, 1);
     for i = 1:nrobots
@@ -85,7 +85,7 @@ end
 
 function [V, DV] = unicycle_clf(x, xd)
     k_clf = 10;
-    
+
     p = x(1:2);
     R = reshape(x(3:end), 2, 2);
     pd = xd(1:2);

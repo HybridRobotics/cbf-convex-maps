@@ -1,13 +1,13 @@
 classdef StaticPolytope4D < AbstractConvexSet
     % 4D extension of a polytope with no parameters.
-    % 
+    %
     % P = {(z,t): A_mat z <= b_vec}.
-    
+
     properties (SetAccess = immutable)
         A_mat
         b_vec
     end
-    
+
     properties (SetAccess = private)
         P = [] % Polyhedron struct.
         V = [] % [-1, 3] matrix, Vertices of polytope.
@@ -16,7 +16,7 @@ classdef StaticPolytope4D < AbstractConvexSet
     properties (Access = public)
         surf_pts = []
     end
-    
+
     methods
         function obj = StaticPolytope4D(A, b, reduce)
             % Inputs:
@@ -47,10 +47,10 @@ classdef StaticPolytope4D < AbstractConvexSet
                 A_mat = P.A;
                 b_vec = P.b;
             end
-            
+
             assert(SetUtils.is_polytope_solid(A_mat, b_vec), ...
                 'Polyhedron is not solid');
-            
+
             assert(size(A_mat, 2) == 3);
             obj = obj@AbstractConvexSet(0, 4, size(A_mat, 1));
             obj.P = P;
@@ -58,11 +58,11 @@ classdef StaticPolytope4D < AbstractConvexSet
             obj.A_mat = A_mat;
             obj.b_vec = b_vec;
         end
-        
+
         function cons = A(obj, ~, z_)
             cons = obj.A_mat * z_(1:3) - obj.b_vec;
         end
-        
+
         function [A, dAdx, dAdz, d2Adxz_y, d2Adzz_y] = ...
                 derivatives(obj, ~, z_, ~)
             A = obj.A_mat * z_(1:3) - obj.b_vec;
@@ -71,7 +71,7 @@ classdef StaticPolytope4D < AbstractConvexSet
             d2Adxz_y = zeros(obj.nz, 0);
             d2Adzz_y = zeros(obj.nz);
         end
-        
+
         function [obj] = plot_surf(obj, ~, hdl, fc, fa, ~)
             if isempty(obj.surf_pts)
                 P_ = Polyhedron(obj.A_mat, obj.b_vec);

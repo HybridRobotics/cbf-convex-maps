@@ -7,7 +7,7 @@ function [til] = plot_figure(robots, logs, a_hcbf, dist_margin)
     til.TileSpacing = "tight";
     til.Padding = "tight";
     til.TileIndexing = "rowmajor"; % (default).
-    
+
     %% First tile - Initial snapshot.
     nrobots = numel(robots);
     nT = logs.nT;

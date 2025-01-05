@@ -1,23 +1,23 @@
 classdef SmoothPolytope4D < AbstractConvexSet
     % Smooth approximation of a 4D extension of a polytope set
     % using log-sum-exp, with parameters as (position, velocity, orientation).
-    % 
+    %
     % (p, v, R): (position, velocity, orientation).
     % P = struct('A_mat', A_mat, 'b_vec', b_vec).
     % alpha: tightness parameter.
-    
+
     properties (SetAccess = immutable)
         A_mat
         b_vec
         alpha
         Tmax
     end
-    
+
     properties (Access = public)
         % [-1, nz] matrix, Vertices of a surface mesh for the set when
         % p = 0, R = I.
         V = []
-        
+
         center = [] % Analytic center of the set when p = 0, R = I.
         radius = [] % Upper bound on the radius of the set.
     end
@@ -26,26 +26,26 @@ classdef SmoothPolytope4D < AbstractConvexSet
         surf_pts = []
         mesh_pts = []
     end
-    
+
     methods
         function obj = SmoothPolytope4D(P, alpha, Tmax)
             assert(SetUtils.is_polytope_solid(P.A_mat, P.b_vec), ...
                 'Polyhedron is not solid');
             assert(size(P.A_mat, 2) == 3);
-            
+
             obj = obj@AbstractConvexSet(2*3 + 9, 4, 1);
             obj.A_mat = P.A_mat;
             obj.b_vec = P.b_vec;
             obj.Tmax = Tmax;
             obj.alpha = alpha;
         end
-        
+
         function cons = A(obj, x, z_)
             p = x(1:3);
             v = x(4:6);
             % R is vectorized column-first.
             R = reshape(x(7:end), 3, 3);
-            
+
             Ax = [obj.A_mat * R', -obj.A_mat * R' * v * obj.Tmax;
                 zeros(1, 3), 1;
                 zeros(1, 3), -1];
@@ -53,7 +53,7 @@ classdef SmoothPolytope4D < AbstractConvexSet
             bx = bx + ones(size(bx)) * log(size(bx, 1)) / obj.alpha;
             cons = 1/obj.alpha * logsumexp_a(obj.alpha * (Ax * z_ - bx));
         end
-        
+
         function [A, dAdx, dAdz, d2Adxz_y, d2Adzz_y] = ...
                 derivatives(obj, x, z_, y)
             p = x(1:3);
@@ -61,14 +61,14 @@ classdef SmoothPolytope4D < AbstractConvexSet
             R = reshape(x(7:end), 3, 3);
             z = z_(1:3);
             t = z_(4);
-            
+
             Ax = [obj.A_mat * R', -obj.A_mat * R' * v * obj.Tmax;
                 zeros(1, 3), 1;
                 zeros(1, 3), -1];
             bx = [obj.b_vec + obj.A_mat * R' * p; 1; 0];
             bx = bx + ones(size(bx)) * log(size(bx, 1)) / obj.alpha;
             [lse, sm] = logsumexp_a(obj.alpha * (Ax * z_ - bx));
-            
+
             % Note: A x = \sum_i A^i x_i = \sum_i (x_i I) A^i,
             %           = kron(x', I) vec(A).
             %       A'y = [y' A^1; y' A^2; ...] = kron(I, y') vec(A).
@@ -87,7 +87,7 @@ classdef SmoothPolytope4D < AbstractConvexSet
                 -obj.Tmax * v' * kron(temp_, eye(3))];
             d2Adxz_y = y(1) * d2Adxz;
         end
-        
+
         function [obj] = plot_surf(obj, x, hdl, fc, fa, ea)
             if isempty(obj.center) || isempty(obj.radius)
                 error(strcat('Specify the center and radius of a sphere ', ...
@@ -107,7 +107,7 @@ classdef SmoothPolytope4D < AbstractConvexSet
                 obj.mesh_pts = get_mesh_points(obj_, x_);
             end
             V_ = R * obj.surf_pts' + p * ones(1, size(obj.surf_pts, 1));
-            
+
             K = convhull(V_(1, :), V_(2, :), V_(3, :), 'Simplify', true);
             hold on
             trisurf(K, V_(1, :), V_(2, :), V_(3, :), 'FaceColor', fc, ...

@@ -1,6 +1,6 @@
 function [V] = get_surf_points(C, x, n)
     % Find points on the surface of a 2d/3d convex set.
-    % 
+    %
     % Inputs:
     %   C: Convex set, C.radius and C.center should be defined.
     %   x: State of C.
@@ -23,9 +23,9 @@ function [V] = get_surf_points(C, x, n)
     else
         error('nz other than 2 or 3 is not supported');
     end
-    
+
     V = zeros(size(P));
-    
+
     options = optimoptions('fmincon', 'Display', 'off', ...
         'Algorithm', 'interior-point');
     options.SubproblemAlgorithm = 'factorization';
@@ -34,10 +34,10 @@ function [V] = get_surf_points(C, x, n)
     options.ConstraintTolerance = 1e-6;
     options.OptimalityTolerance = 1e-6;
     options.MaxIterations       = 1000;
-    
+
     cons = @(z) nonlcon(z, x, C);
     options.HessianFcn = @(z,lambda) hessian_fcn(z, x, lambda, C);
-    
+
     wb = waitbar(0, 'Starting');
     for i = 1:size(P, 1)
         pt = P(i, :)';
@@ -60,14 +60,14 @@ function [c, ceq, GC, GCeq] = nonlcon(z, x, C)
 
     c = A';
     ceq = [];
-    
+
     GC = dAdz';
     GCeq = [];
 end
 
 function Hout = hessian_fcn(z, x, lambda, C)
     [~,~,~,~, d2Adzz_y] = C.derivatives(x, z, lambda.ineqnonlin);
-    
+
     Hout = 2 * eye(C.nz) + d2Adzz_y;
     Hout = sparse(Hout);
 end

@@ -26,4 +26,3 @@ end
 function [V, DV] = simplequadrotor_clf(x, xd)
     %
 end
-

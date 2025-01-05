@@ -44,4 +44,3 @@ function [] = print_stats(out)
     disp(['Fraction of nonempty J_2: ' ...
         num2str(out.n_J2e / length(out.t_opt_seq))]);
 end
-

@@ -68,4 +68,3 @@ target_compile_definitions(${LIB_CORE}
 )
 
 # install(TARGETS ${LIB_CORE} LIBRARY DESTINATION "${PROJECT_SOURCE_DIR}/lib/")
-

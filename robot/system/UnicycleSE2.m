@@ -1,6 +1,6 @@
 classdef UnicycleSE2 < DynamicalSystem
     % Unicycle system in 2d with SE(2) representation.
-    % 
+    %
     % x: [6, 1] vector, = (p, R).
     % u: [2, 1] vector, = (u1, u2).
     % \dot{x} = [R * [1; 0] * u1; vec(R * hat(u2))].
@@ -15,11 +15,11 @@ classdef UnicycleSE2 < DynamicalSystem
                 Au = [eye(2); -eye(2)];
                 bu = [1; 2*pi; 1; 2*pi];
             end
-            
+
             obj@DynamicalSystem(6, 2, Au, bu);
             obj.x = x0;
         end
-        
+
         function [f, g] = dyn(obj, x)
             ctheta = x(3);
             stheta = x(4);

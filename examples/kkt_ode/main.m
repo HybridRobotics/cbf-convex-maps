@@ -87,18 +87,18 @@ end
 % plot(t_seq(1:end-1), out_3d.Ddist2_opt_seq, '-r');
 % % plot(t_seq(1:end-1), out_3d.Ddist2_ode_seq, '-g');
 % plot(t_seq(1:end-1), out_3d.Ddist2_analytic_seq, '-b');
-% 
+%
 % % figure()
 % % plot(t_seq, out_3d.kkt_err_seq)
 % % set(gca, 'YScale', 'log')
-% 
+%
 % figure()
 % hold on
 % % plot(t_seq(1:end-1), out_3d.Ddist2_opt_seq - out_3d.Ddist2_ode_seq, '-r');
 % plot(t_seq(1:end-1), zeros(1, nT-1), '--k');
 % plot(t_seq(1:end-1), out_3d.Ddist2_opt_seq ./ (2*sqrt(out_3d.dist2_opt_seq(1:end-1))) - out_3d.Ddist2_analytic_seq ./ (2*sqrt(out_3d.dist2_ode_seq(1:end-1))), '-g');
 % % plot(t_seq(1:end-1), out_3d.Ddist2_ode_seq - out_3d.Ddist2_analytic_seq, '-b');
-% 
+%
 % norm(out_3d.Ddist2_opt_seq - out_3d.Ddist2_analytic_seq, Inf)
 % mean(out_3d.Ddist2_opt_seq - out_3d.Ddist2_analytic_seq)
 

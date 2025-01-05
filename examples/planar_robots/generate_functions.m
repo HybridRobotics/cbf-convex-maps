@@ -41,7 +41,7 @@ figure();
 ax = gca;
 C1.plot_surf(zeros(3, 1), ax, 'r', 1, 1);
 
-% 
+%
 lev = 2;
 C2 = Norm4Level(lev);
 C2.check_dims();
