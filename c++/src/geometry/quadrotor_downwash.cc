@@ -1,34 +1,32 @@
-#include "quadrotor_shape.h"
+#include "sccbf/geometry/quadrotor_downwash.h"
 
 #include <Eigen/Core>
 #include <cassert>
-#include <cmath>
 
 #include "sccbf/data_types.h"
 #include "sccbf/derivatives.h"
 #include "sccbf/geometry/convex_set.h"
+#include "sccbf/utils/matrix_utils.h"
 
 namespace sccbf {
 
-QuadrotorShape::QuadrotorShape(double pow, const Eigen::Vector4d& coeff,
-                               double margin)
-    : ConvexSet(kNz, kNr, kNx, kNdx, margin), pow_(pow), coeff_(coeff) {
-  assert(pow >= 2);
-  assert((coeff.array() > 0).all());
-
-  coeff_pow_.head<3>() = (1.0 / coeff_.head<3>().array()).pow(pow_);
-  coeff_pow_(3) = std::pow(coeff_(3), pow_);
+QuadrotorDownwash::QuadrotorDownwash(const MatrixXd& A, const VectorXd& b,
+                                     double level, double margin)
+    : ConvexSet(kNz, kNr, kNx, kNdx, margin), A_(A), b_(b), level_(level) {
+  assert(A.rows() > 0);
+  assert(A.rows() == b.rows());
+  assert(A.cols() == kNz);
 
   CheckDimensions();
 }
 
-QuadrotorShape::~QuadrotorShape() {}
+QuadrotorDownwash::~QuadrotorDownwash() {}
 
-const Derivatives& QuadrotorShape::UpdateDerivatives(const VectorXd& x,
-                                                     const VectorXd& dx,
-                                                     const VectorXd& z,
-                                                     const VectorXd& y,
-                                                     DerivativeFlags flag) {
+const Derivatives& QuadrotorDownwash::UpdateDerivatives(const VectorXd& x,
+                                                        const VectorXd& dx,
+                                                        const VectorXd& z,
+                                                        const VectorXd& y,
+                                                        DerivativeFlags flag) {
   assert(x.rows() == kNx);
   assert(dx.rows() == kNdx);
   assert(z.rows() == kNz);
@@ -41,13 +39,12 @@ const Derivatives& QuadrotorShape::UpdateDerivatives(const VectorXd& x,
   const auto R_dot = dx.tail<9>().reshaped(3, 3);
   const auto zb_dot = R_dot.transpose() * (z - p) - R.transpose() * v;
 
-  const VectorXd zb_pow2 = zb.cwiseAbs().cwisePow(pow_ - 2);
-  const VectorXd grad =
-      pow_ * coeff_pow_.head<3>().cwiseProduct(zb_pow2.cwiseProduct(zb));
+  VectorXd softmax(A_.rows());
+  const double lse = LogSumExp(A_ * zb - b_, softmax);
+  const auto grad = A_.transpose() * softmax;
 
   if (has_flag(flag, DerivativeFlags::f)) {
-    const auto zb_pow = zb_pow2.cwiseProduct(zb.cwiseSquare());
-    derivatives_.f(0) = coeff_pow_.head<3>().dot(zb_pow) - coeff_pow_(3);
+    derivatives_.f(0) = lse - level_;
   }
   if (has_flag(flag, DerivativeFlags::f_z) ||
       has_flag(flag, DerivativeFlags::f_x)) {
@@ -57,8 +54,9 @@ const Derivatives& QuadrotorShape::UpdateDerivatives(const VectorXd& x,
   if (has_flag(flag, DerivativeFlags::f_zz_y) ||
       has_flag(flag, DerivativeFlags::f_zz_y_lb) ||
       has_flag(flag, DerivativeFlags::f_xz_y)) {
-    const auto hess = pow_ * (pow_ - 1) *
-                      coeff_pow_.head<3>().cwiseProduct(zb_pow2).asDiagonal();
+    const MatrixXd diag = softmax.asDiagonal();
+    const auto hess =
+        A_.transpose() * (diag - softmax * softmax.transpose()) * A_;
     derivatives_.f_zz_y = y(0) * R * hess * R.transpose();
     derivatives_.f_zz_y_lb = derivatives_.f_zz_y;  // Hack.
     derivatives_.f_xz_y = y(0) * (R * hess * zb_dot + R_dot * grad);
@@ -66,9 +64,9 @@ const Derivatives& QuadrotorShape::UpdateDerivatives(const VectorXd& x,
   return derivatives_;
 }
 
-void QuadrotorShape::LieDerivatives(const VectorXd& x, const VectorXd& z,
-                                    const VectorXd& y, const MatrixXd& fg,
-                                    MatrixXd& L_fg_y) const {
+void QuadrotorDownwash::LieDerivatives(const VectorXd& x, const VectorXd& z,
+                                       const VectorXd& y, const MatrixXd& fg,
+                                       MatrixXd& L_fg_y) const {
   assert(x.rows() == kNx);
   assert(z.rows() == kNz);
   assert(y.rows() == kNr);
@@ -79,9 +77,10 @@ void QuadrotorShape::LieDerivatives(const VectorXd& x, const VectorXd& z,
   const auto p = x.head<3>();
   const auto R = x.tail<9>().reshaped(3, 3);
   const auto zb = R.transpose() * (z - p);
-  const auto zb_pow2 = zb.cwiseAbs().cwisePow(pow_ - 2);
-  const auto grad =
-      pow_ * coeff_pow_.head<3>().cwiseProduct(zb_pow2.cwiseProduct(zb));
+
+  VectorXd softmax(A_.rows());
+  LogSumExp(A_ * zb - b_, softmax);
+  const auto grad = A_.transpose() * softmax;
 
   for (int i = 0; i < fg.cols(); ++i) {
     const auto v = fg.col(i).head<3>();

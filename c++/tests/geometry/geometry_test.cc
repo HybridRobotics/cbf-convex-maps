@@ -7,8 +7,13 @@
 #include "sccbf/geometry/convex_set.h"
 #include "sccbf/geometry/ellipsoid.h"
 #include "sccbf/geometry/polytope.h"
+#include "sccbf/geometry/quadrotor_corridor.h"
+#include "sccbf/geometry/quadrotor_downwash.h"
+#include "sccbf/geometry/quadrotor_shape.h"
+#include "sccbf/geometry/quadrotor_uncertainty.h"
 #include "sccbf/geometry/static_ellipsoid.h"
 #include "sccbf/geometry/static_polytope.h"
+#include "sccbf/system/quadrotor_reduced.h"
 #include "sccbf/transformation/intersection.h"
 #include "sccbf/transformation/minkowski.h"
 #include "sccbf/utils/matrix_utils.h"
@@ -92,6 +97,36 @@ StateVariables RandomSeStateVariables(const ConvexSet& set) {
   return var;
 }
 
+StateVariables RandomQuadStateVariables(const ConvexSet& set) {
+  constexpr int nx = 15;
+  assert(set.nx() == nx);
+  assert(set.ndx() == nx);
+  const int nz = set.nz();
+  const int nr = set.nr();
+  StateVariables var(nx, nx, nz, nr);
+
+  // Set x.
+  var.x.head<6>() = VectorXd::Random(6);
+  MatrixXd R(3, 3);
+  RandomRotation<3>(R);
+  var.x.tail<9>() = R.reshaped(9, 1);
+  // Set dx and x_dot.
+  var.dx.head<3>() = var.x.segment<3>(3);
+  var.dx.segment<3>(3) = VectorXd::Random(3);
+  VectorXd w = VectorXd::Random(3);
+  MatrixXd w_hat = MatrixXd::Zero(3, 3);
+  HatMap<3>(w, w_hat);
+  var.dx.tail<9>() = (R * w_hat).reshaped(9, 1);
+  var.x_dot = var.dx;
+
+  // Set z, y.
+  var.z = VectorXd::Random(nz);
+  var.y = VectorXd::Random(nr);
+  var.y.array() = var.y.array() + 1;
+
+  return var;
+}
+
 // Assertion function
 Eigen::IOFormat kVecFmt(4, Eigen::DontAlignCols, ", ", "\n", "[", "]");
 Eigen::IOFormat kMatFmt(4, 0, ", ", "\n", "[", "]");
@@ -147,6 +182,22 @@ testing::AssertionResult AssertDerivativeEQ(
           << var.y.transpose().format(kVecFmt);
 
   return failure;
+}
+
+testing::AssertionResult AssertMatrixEQ(const char* mat1_expr,
+                                        const char* mat2_expr,
+                                        const char* /*tol_expr*/,
+                                        const MatrixXd& mat1,
+                                        const MatrixXd& mat2, double tol) {
+  const double inf_norm = (mat1 - mat2).lpNorm<Eigen::Infinity>();
+  if (inf_norm < tol) return testing::AssertionSuccess();
+
+  return testing::AssertionFailure()
+         << mat1_expr << " =" << std::endl
+         << mat1.format(kMatFmt) << std::endl
+         << "and " << mat2_expr << " = " << std::endl
+         << mat2.format(kMatFmt) << std::endl
+         << "are not equal";
 }
 
 // Geometry tests
@@ -377,6 +428,158 @@ TEST(ConvexSetTest, MinkowskiSumSet) {
       NumericalDerivatives(*set_ptr, var.x, var.x_dot, var.dx, var.z, var.y);
 
   EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
+}
+
+// QuadrotorShape test
+TEST(GeometryTest, QuadrotorShape) {
+  const double pow = 2.5;
+  const Eigen::Vector4d coeff(1.0, 1.0, 0.4, 0.3);
+  const double margin = 0;
+  auto set = QuadrotorShape(pow, coeff, margin);
+
+  StateVariables var = RandomQuadStateVariables(set);
+
+  // Derivative test.
+  const Derivatives& d1 =
+      set.UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
+  Derivatives d2 =
+      NumericalDerivatives(set, var.x, var.x_dot, var.dx, var.z, var.y);
+
+  EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
+
+  // Lie derivative test.
+  const int nu = 4;
+  const double mass = 0.5;  // [kg].
+  const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
+  const VectorXd constr_vec_u = VectorXd::Zero(0);
+
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  MatrixXd fg(15, nu + 1);
+  sys->Dynamics(fg);
+
+  MatrixXd L_fg_y1(1, nu + 1), L_fg_y2(1, nu + 1);
+  set.LieDerivatives(var.x, var.z, var.y, fg, L_fg_y1);
+  NumericalLieDerivatives(set, var.x, var.z, var.y, fg, fg, L_fg_y2);
+
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, L_fg_y1, L_fg_y2, kDerivativeErrorTol);
+}
+
+// QuadrotorDownwash test
+TEST(GeometryTest, QuadrotorDownwash) {
+  MatrixXd A(5, 3);
+  A << 4.0, 0.0, 2.0,  //
+      0.0, 4.0, 2.0,   //
+      -4.0, 0.0, 2.0,  //
+      0.0, -4.0, 2.0,  //
+      0.0, 0.0, -1.5;
+  const VectorXd b = VectorXd::Zero(5);
+  const double level = 1.5;
+  const double margin = 0;
+  auto set = QuadrotorDownwash(A, b, level, margin);
+
+  StateVariables var = RandomQuadStateVariables(set);
+
+  // Derivative test.
+  const Derivatives& d1 =
+      set.UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
+  Derivatives d2 =
+      NumericalDerivatives(set, var.x, var.x_dot, var.dx, var.z, var.y);
+
+  EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
+
+  // Lie derivative test.
+  const int nu = 4;
+  const double mass = 0.5;  // [kg].
+  const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
+  const VectorXd constr_vec_u = VectorXd::Zero(0);
+
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  MatrixXd fg(15, nu + 1);
+  sys->Dynamics(fg);
+
+  MatrixXd L_fg_y1(1, nu + 1), L_fg_y2(1, nu + 1);
+  set.LieDerivatives(var.x, var.z, var.y, fg, L_fg_y1);
+  NumericalLieDerivatives(set, var.x, var.z, var.y, fg, fg, L_fg_y2);
+
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, L_fg_y1, L_fg_y2, kDerivativeErrorTol);
+}
+
+// QuadrotorCorridor test
+TEST(GeometryTest, QuadrotorCorridor) {
+  const double stop_time = 2.0;         // [s].
+  const double orientation_cost = 1.0;  // [s].
+  const double max_vel = 1.0;           // [m/s].
+  const double margin = 0;
+  auto set = QuadrotorCorridor(stop_time, orientation_cost, max_vel, margin);
+
+  StateVariables var = RandomQuadStateVariables(set);
+
+  // Derivative test.
+  const Derivatives& d1 =
+      set.UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
+  Derivatives d2 =
+      NumericalDerivatives(set, var.x, var.x_dot, var.dx, var.z, var.y);
+
+  EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var,
+                      10 * kDerivativeErrorTol);
+
+  // Lie derivative test.
+  const int nu = 4;
+  const double mass = 0.5;  // [kg].
+  const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
+  const VectorXd constr_vec_u = VectorXd::Zero(0);
+
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  MatrixXd fg(15, nu + 1);
+  sys->Dynamics(fg);
+
+  MatrixXd L_fg_y1(1, nu + 1), L_fg_y2(1, nu + 1);
+  set.LieDerivatives(var.x, var.z, var.y, fg, L_fg_y1);
+  NumericalLieDerivatives(set, var.x, var.z, var.y, fg, fg, L_fg_y2);
+
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, L_fg_y1, L_fg_y2,
+                      10 * kDerivativeErrorTol);
+}
+
+// QuadrotorUncertainty test
+TEST(GeometryTest, QuadrotorUncertainty) {
+  const MatrixXd mat = MatrixXd::Random(3, 3);
+  const double eps = 1.0;
+  MatrixXd Q = mat.transpose() * mat + eps * MatrixXd::Identity(3, 3);
+  Eigen::Vector4d coeff = Eigen::Vector4d::Random();
+  coeff(0) = coeff(0) + 1.1;
+  const double margin = 0;
+  auto set = QuadrotorUncertainty(Q, coeff, margin);
+
+  StateVariables var = RandomQuadStateVariables(set);
+
+  // Derivative test.
+  const Derivatives& d1 =
+      set.UpdateDerivatives(var.x, var.dx, var.z, var.y, kFlag);
+  Derivatives d2 =
+      NumericalDerivatives(set, var.x, var.x_dot, var.dx, var.z, var.y);
+
+  EXPECT_PRED_FORMAT4(AssertDerivativeEQ, d1, d2, var, kDerivativeErrorTol);
+
+  // Lie derivative test.
+  const int nu = 4;
+  const double mass = 0.5;  // [kg].
+  const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
+  const VectorXd constr_vec_u = VectorXd::Zero(0);
+
+  std::shared_ptr<DynamicalSystem> sys =
+      std::make_shared<QuadrotorReduced>(mass, constr_mat_u, constr_vec_u);
+  MatrixXd fg(15, nu + 1);
+  sys->Dynamics(fg);
+
+  MatrixXd L_fg_y1(1, nu + 1), L_fg_y2(1, nu + 1);
+  set.LieDerivatives(var.x, var.z, var.y, fg, L_fg_y1);
+  NumericalLieDerivatives(set, var.x, var.z, var.y, fg, fg, L_fg_y2);
+
+  EXPECT_PRED_FORMAT3(AssertMatrixEQ, L_fg_y1, L_fg_y2, kDerivativeErrorTol);
 }
 
 }  // namespace

@@ -26,7 +26,10 @@ class CollisionPair {
 
   bool MinimumDistance();
 
-  double MinimumDistanceDerivative();
+  double GetMinimumDistanceDerivative() const;
+
+  void LieDerivatives(const MatrixXd& fg1, const MatrixXd& fg2,
+                      MatrixXd& L_fg_y1, MatrixXd& L_fg_y2) const;
 
   double KktStep();
 
@@ -38,6 +41,12 @@ class CollisionPair {
   const std::shared_ptr<ConvexSet>& get_set2();
 
   double get_kkt_solution(VectorXd& z, VectorXd& lambda) const;
+
+  void set_kkt_solution(double dist2, VectorXd& z, VectorXd& lambda);
+
+  double get_minimum_distance() const;
+
+  double get_margin() const;
 
   friend class DistanceProblem;
 

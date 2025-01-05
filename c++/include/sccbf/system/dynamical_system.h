@@ -35,6 +35,8 @@ class DynamicalSystem {
   // Non-virtual functions.
   void Dynamics(VectorXd& f, MatrixXd& g) const;
 
+  void Dynamics(MatrixXd& fg) const;
+
   void set_x(const VectorXd& x);
 
   const VectorXd& x() const;
@@ -68,7 +70,17 @@ inline DynamicalSystem::DynamicalSystem(int nx, int nu,
 }
 
 inline void DynamicalSystem::Dynamics(VectorXd& f, MatrixXd& g) const {
-  return Dynamics(x_, f, g);
+  Dynamics(x_, f, g);
+}
+
+inline void DynamicalSystem::Dynamics(MatrixXd& fg) const {
+  const int nx = this->nx();
+  const int nu = this->nu();
+  VectorXd f(nx);
+  MatrixXd g(nx, nu);
+  Dynamics(x_, f, g);
+  fg.col(0) = f;
+  fg.rightCols(nu) = g;
 }
 
 inline const VectorXd& DynamicalSystem::IntegrateDynamics(const VectorXd& u,

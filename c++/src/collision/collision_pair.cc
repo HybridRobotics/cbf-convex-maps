@@ -63,7 +63,7 @@ bool CollisionPair::MinimumDistance() {
   return solved;
 }
 
-double CollisionPair::MinimumDistanceDerivative() {
+double CollisionPair::GetMinimumDistanceDerivative() const {
   const auto z1 = z_opt_.head(nz1_);
   const auto z2 = z_opt_.tail(nz2_);
   const auto lambda1 = lambda_opt_.head(nr1_);
@@ -74,6 +74,17 @@ double CollisionPair::MinimumDistanceDerivative() {
   const Derivatives& d2 = C2_->UpdateDerivatives(z2, lambda2, flag);
 
   return lambda1.dot(d1.f_x) + lambda2.dot(d2.f_x);
+}
+
+void CollisionPair::LieDerivatives(const MatrixXd& fg1, const MatrixXd& fg2,
+                                   MatrixXd& L_fg_y1, MatrixXd& L_fg_y2) const {
+  const auto z1 = z_opt_.head(nz1_);
+  const auto z2 = z_opt_.tail(nz2_);
+  const auto lambda1 = lambda_opt_.head(nr1_);
+  const auto lambda2 = lambda_opt_.tail(nr2_);
+
+  C1_->LieDerivatives(z1, lambda1, fg1, L_fg_y1);
+  C2_->LieDerivatives(z2, lambda2, fg2, L_fg_y2);
 }
 
 double CollisionPair::KktStep() {
@@ -143,14 +154,29 @@ const std::shared_ptr<ConvexSet>& CollisionPair::get_set1() { return C1_; }
 
 const std::shared_ptr<ConvexSet>& CollisionPair::get_set2() { return C2_; }
 
-double CollisionPair::get_kkt_solution(VectorXd& z_opt,
-                                       VectorXd& lambda_opt) const {
-  assert(z_opt.size() == z_opt_.size());
-  assert(lambda_opt.size() == lambda_opt_.size());
+double CollisionPair::get_kkt_solution(VectorXd& z, VectorXd& lambda) const {
+  assert(z.size() == z_opt_.size());
+  assert(lambda.size() == lambda_opt_.size());
 
-  z_opt = z_opt_;
-  lambda_opt = lambda_opt_;
+  z = z_opt_;
+  lambda = lambda_opt_;
   return dist2_opt_;
+}
+
+void CollisionPair::set_kkt_solution(double dist2, VectorXd& z,
+                                     VectorXd& lambda) {
+  assert(z.size() == z_opt_.size());
+  assert(lambda.size() == lambda_opt_.size());
+
+  z_opt_ = z;
+  lambda_opt_ = lambda;
+  dist2_opt_ = dist2;
+}
+
+double CollisionPair::get_minimum_distance() const { return dist2_opt_; }
+
+double CollisionPair::get_margin() const {
+  return C1_->get_safety_margin() + C2_->get_safety_margin();
 }
 
 double CollisionPair::PrimalDualGap_() {

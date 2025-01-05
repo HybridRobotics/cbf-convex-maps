@@ -13,6 +13,10 @@ set(LIB_CORE_SOURCES_COLLISION
 set(LIB_CORE_SOURCES_GEOMETRY
   "${PROJECT_SOURCE_DIR}/src/geometry/ellipsoid.cc"
   "${PROJECT_SOURCE_DIR}/src/geometry/polytope.cc"
+  "${PROJECT_SOURCE_DIR}/src/geometry/quadrotor_corridor.cc"
+  "${PROJECT_SOURCE_DIR}/src/geometry/quadrotor_downwash.cc"
+  "${PROJECT_SOURCE_DIR}/src/geometry/quadrotor_shape.cc"
+  "${PROJECT_SOURCE_DIR}/src/geometry/quadrotor_uncertainty.cc"
   "${PROJECT_SOURCE_DIR}/src/geometry/static_ellipsoid.cc"
   "${PROJECT_SOURCE_DIR}/src/geometry/static_polytope.cc"
 )
@@ -63,5 +67,5 @@ target_compile_definitions(${LIB_CORE}
     ${IPOPT_DEFINITIONS}
 )
 
-# install(TARGETS sccbf LIBRARY DESTINATION "${PROJECT_SOURCE_DIR}/lib/")
+# install(TARGETS ${LIB_CORE} LIBRARY DESTINATION "${PROJECT_SOURCE_DIR}/lib/")
 

@@ -1,4 +1,4 @@
-#include "quadrotor_uncertainty.h"
+#include "sccbf/geometry/quadrotor_uncertainty.h"
 
 #include <Eigen/Core>
 #include <cassert>

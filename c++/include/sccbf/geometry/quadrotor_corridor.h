@@ -48,7 +48,6 @@ class QuadrotorCorridor : public ConvexSet {
   static constexpr double kEps = 0.2;
   static constexpr double kEcc = 5;
   static constexpr double kMin = 0.1;
-  static constexpr double kScale = 1 / (4 * kEcc * kEcc);
 
   const double stop_time_;
   const double orientation_const_;

@@ -1,4 +1,4 @@
-#include "quadrotor_corridor.h"
+#include "sccbf/geometry/quadrotor_corridor.h"
 
 #include <Eigen/Core>
 #include <cassert>
@@ -48,41 +48,41 @@ const Derivatives& QuadrotorCorridor::UpdateDerivatives(const VectorXd& x,
   const double corridor_time =
       (stop_time_ + orientation_const_ * (1 + R.col(2).dot(nv)));
   const auto q = v * corridor_time;
-  const double q_norm = q.norm();
+  const double q_max = max_vel_ * (stop_time_ + 2 * orientation_const_);
+  const double q_norm = std::sqrt(std::pow(kEps * q_max, 2) + q.dot(q));
+  const auto nq = q / q_norm;
   const auto q_dot =
       a * corridor_time +
       v * orientation_const_ * (R.col(2).dot(nv_dot) + R_dot.col(2).dot(nv));
+  const auto nq_dot = (q_dot - nq * nq.dot(q_dot)) / q_norm;
 
   const auto zb = z - p - q / 2;
   const auto zb_dot = -v - q_dot / 2;
 
-  const auto Q = std::pow(kEcc * q_norm, 2) * MatrixXd::Identity(3, 3) -
-                 (kEcc * kEcc - 1) * q * q.transpose();
+  const auto Q = kEcc * kEcc * MatrixXd::Identity(3, 3) -
+                 (kEcc * kEcc - 1) * nq * nq.transpose();
 
   if (has_flag(flag, DerivativeFlags::f)) {
     const double func = zb.transpose() * Q * zb;
-    const double level = std::pow((kMin + q_norm / 2) * q_norm, 2);
-    derivatives_.f(0) = kScale * (func - level);
+    const double level = std::pow(kMin + q_norm / 2, 2);
+    derivatives_.f(0) = func - level;
   }
   if (has_flag(flag, DerivativeFlags::f_z)) {
-    derivatives_.f_z = 2 * kScale * zb.transpose() * Q;
+    derivatives_.f_z = 2 * zb.transpose() * Q;
   }
   if (has_flag(flag, DerivativeFlags::f_zz_y) ||
       has_flag(flag, DerivativeFlags::f_zz_y_lb)) {
-    derivatives_.f_zz_y = 2 * y(0) * kScale * Q;
-    derivatives_.f_zz_y_lb = derivatives_.f_zz_y;  // Hack.
+    derivatives_.f_zz_y = 2 * y(0) * Q;
+    derivatives_.f_zz_y_lb = derivatives_.f_zz_y;
   }
   if (has_flag(flag, DerivativeFlags::f_x) ||
       has_flag(flag, DerivativeFlags::f_xz_y)) {
-    const auto Q_dot =
-        2 * (kEcc * kEcc) * q.dot(q_dot) * MatrixXd::Identity(3, 3) -
-        (kEcc * kEcc - 1) * (q * q_dot.transpose() + q_dot * q.transpose());
-    const double level_dot = 2 * (kMin * kMin) * q.dot(q_dot) +
-                             3 * kMin * q_norm * q.dot(q_dot) +
-                             q_norm * q_norm * q.dot(q_dot);
+    const auto Q_dot = -(kEcc * kEcc - 1) *
+                       (nq * nq_dot.transpose() + nq_dot * nq.transpose());
+    const double level_dot = (kMin + q_norm / 2) * nq.dot(q_dot);
     derivatives_.f_x(0) =
-        kScale * (zb.transpose() * (2 * Q * zb_dot + Q_dot * zb) - level_dot);
-    derivatives_.f_xz_y = 2 * y(0) * kScale * (Q_dot * zb + Q * zb_dot);
+        zb.transpose() * (2 * Q * zb_dot + Q_dot * zb) - level_dot;
+    derivatives_.f_xz_y = 2 * y(0) * (Q_dot * zb + Q * zb_dot);
   }
   return derivatives_;
 }
@@ -101,6 +101,8 @@ void QuadrotorCorridor::LieDerivatives(const VectorXd& x, const VectorXd& z,
   const auto R = x.tail<9>().reshaped(3, 3);
   const auto v = x.segment<3>(3);
 
+  const double q_max = max_vel_ * (stop_time_ + 2 * orientation_const_);
+
   for (int i = 0; i < fg.cols(); ++i) {
     const auto vi = fg.col(i).head<3>();
     const auto a = fg.col(i).segment<3>(3);
@@ -113,25 +115,24 @@ void QuadrotorCorridor::LieDerivatives(const VectorXd& x, const VectorXd& z,
     const double corridor_time =
         (stop_time_ + orientation_const_ * (1 + R.col(2).dot(nv)));
     const auto q = v * corridor_time;
-    const double q_norm = q.norm();
+    const double q_norm = std::sqrt(std::pow(kEps * q_max, 2) + q.dot(q));
+    const auto nq = q / q_norm;
     const auto q_dot =
         a * corridor_time +
         v * orientation_const_ * (R.col(2).dot(nv_dot) + R_dot.col(2).dot(nv));
+    const auto nq_dot = (q_dot - nq * nq.dot(q_dot)) / q_norm;
 
     const auto zb = z - p - q / 2;
     const auto zb_dot = -vi - q_dot / 2;
 
-    const auto Q = std::pow(kEcc * q_norm, 2) * MatrixXd::Identity(3, 3) -
-                   (kEcc * kEcc - 1) * q * q.transpose();
-    const auto Q_dot =
-        2 * (kEcc * kEcc) * q.dot(q_dot) * MatrixXd::Identity(3, 3) -
-        (kEcc * kEcc - 1) * (q * q_dot.transpose() + q_dot * q.transpose());
-    const double level_dot = 2 * (kMin * kMin) * q.dot(q_dot) +
-                             3 * kMin * q_norm * q.dot(q_dot) +
-                             q_norm * q_norm * q.dot(q_dot);
+    const auto Q = kEcc * kEcc * MatrixXd::Identity(3, 3) -
+                   (kEcc * kEcc - 1) * nq * nq.transpose();
+    const auto Q_dot = -(kEcc * kEcc - 1) *
+                       (nq * nq_dot.transpose() + nq_dot * nq.transpose());
+    const double level_dot = (kMin + q_norm / 2) * nq.dot(q_dot);
 
-    L_fg_y(0, i) = y(0) * kScale *
-                   (zb.transpose() * (2 * Q * zb_dot + Q_dot * zb) - level_dot);
+    L_fg_y(0, i) =
+        y(0) * (zb.transpose() * (2 * Q * zb_dot + Q_dot * zb) - level_dot);
   }
 }
 
