@@ -10,11 +10,11 @@
 // Data types
 #include "sccbf/data_types.h"
 // Geometries
-#include "quadrotor_corridor.h"
-#include "quadrotor_downwash.h"
-#include "quadrotor_shape.h"
-#include "quadrotor_uncertainty.h"
 #include "sccbf/geometry/convex_set.h"
+#include "sccbf/geometry/quadrotor_corridor.h"
+#include "sccbf/geometry/quadrotor_downwash.h"
+#include "sccbf/geometry/quadrotor_shape.h"
+#include "sccbf/geometry/quadrotor_uncertainty.h"
 #include "sccbf/geometry/static_polytope.h"
 #include "sccbf/transformation/minkowski.h"
 // Systems
@@ -53,14 +53,12 @@ struct Environment {
 };
 
 void Environment::set_state(const VectorXd& x, const VectorXd& u) {
-  const int nx = sys->nx();
-  const int nu = sys->nu();
-  assert(x.rows() == nx);
-  assert(u.rows() == nu);
+  assert(x.rows() == 15);
+  assert(u.rows() == 4);
 
   sys->set_x(x);
-  VectorXd f(nx);
-  MatrixXd g(nx, nu);
+  VectorXd f(15);
+  MatrixXd g(15, 4);
   sys->Dynamics(f, g);
   const auto dx = f + g * u;
   cp->get_set2()->set_states(x, dx);
@@ -68,22 +66,17 @@ void Environment::set_state(const VectorXd& x, const VectorXd& u) {
 
 void Environment::set_state(const Eigen::Vector3d& p, const Eigen::Vector3d& v,
                             const Eigen::Matrix3d& R) {
-  assert((R.rows() == 3) && (R.cols() == 3));
-
-  const int nx = sys->nx();
-  const int nu = sys->nu();
-  VectorXd x(nx), u(nu);
+  VectorXd x(15), u(4);
 
   x.head<3>() = p;
   x.segment<3>(3) = v;
   x.tail<9>() = R.reshaped(9, 1);
-  u = VectorXd::Zero(nu);
+  u = VectorXd::Zero(4);
   set_state(x, u);
 }
 
 void Environment::UpdateSystemState(const VectorXd& u, double dt) {
-  const int nu = sys->nu();
-  assert(u.rows() == nu);
+  assert(u.rows() == 4);
 
   sys->IntegrateDynamics(u, dt);
 }
@@ -245,8 +238,7 @@ void GetDesiredTrajectory(double t, Trajectory& trajectory) {
 
 void GetTrackingControl(const std::shared_ptr<DynamicalSystem>& sys,
                         const Trajectory& trajectory, VectorXd& u) {
-  const int nu = sys->nu();
-  assert(u.rows() == nu);
+  assert(u.rows() == 4);
 
   const VectorXd x = sys->x();
   const auto p = x.head<3>();
@@ -340,7 +332,7 @@ void Logs::UpdateOdeLogs(int i, const Environment& env, double kkt_err,
   x.col(i) = env.sys->x();
   solve_time_ode(i) = solve_time;
   dist2_ode(i) = env.cp->get_kkt_solution(z, lambda);
-  Ddist2_ode(i) = env.cp->MinimumDistanceDerivative();
+  Ddist2_ode(i) = env.cp->GetMinimumDistanceDerivative();
   z_ode_.col(i) = z;
   lambda_ode_.col(i) = lambda;
   env.cp->KktError(dual_inf_err, prim_inf_err, compl_err);
@@ -384,7 +376,7 @@ void Logs::SaveLogs(std::ofstream& outfile) {
 
   // Header
   outfile << "#ipopt solves," << num_opt_solves << std::endl;
-  const int nr = obstacle.rows();
+  const int nr = static_cast<int>(obstacle.rows());
   outfile << "obstacle polytope: nr," << nr << std::endl;
   const auto Ab = obstacle;
   for (int i = 0; i < nr; ++i) {
@@ -436,8 +428,8 @@ int main() {
   env.cp->MinimumDistance();
 
   // Initialize logs
-  const int nx = env.sys->nx();
-  const int nu = env.sys->nu();
+  const int nx = 15;
+  const int nu = 4;
   const int nz = env.cp->get_set1()->nz() + env.cp->get_set2()->nz();
   const int nr = env.cp->get_set1()->nr() + env.cp->get_set2()->nr();
   Logs log(Nlog, nx, nz, nr);
