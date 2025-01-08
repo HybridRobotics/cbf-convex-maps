@@ -82,27 +82,58 @@ void Environment::UpdateSystemState(const VectorXd& u, double dt) {
 }
 
 std::shared_ptr<ConvexSet> GetObstacle(MatrixXd& Ab) {
-  const int nz = 3;
-  const int nr = nz * 5;
-  const VectorXd center = VectorXd::Zero(nz);
-  const double in_radius = nz * 0.5;  // [m]
-  const double half_side_len = 3.0;   // [m]
-  const double margin = 0.05;         // [m]
+  MatrixXd A;
+  VectorXd b;
+  const VectorXd center = VectorXd::Zero(3);
+  const double margin = 0.05;  // [m]
   const double sc_modulus = 0.0;
 
-  MatrixXd A_(nr, nz);
-  VectorXd b_(nr);
-  RandomPolytope(center, in_radius, A_, b_);
-  MatrixXd A(nr + 6, nz);
-  VectorXd b(nr + 6);
-  A.topRows(nr) = A_;
-  A.middleRows<3>(nr) = MatrixXd::Identity(3, 3);
-  A.bottomRows<3>() = -MatrixXd::Identity(3, 3);
-  b.head(nr) = b_;
-  b.tail<6>() = half_side_len * VectorXd::Ones(6);
-  Ab.resize(nr + 6, nz + 1);
-  Ab.leftCols(nz) = A;
-  Ab.col(nz) = b;
+  if (false) {
+    const int nr = 15;
+    const double in_radius = 1.5;      // [m]
+    const double half_side_len = 3.0;  // [m]
+
+    MatrixXd A_(nr, 3);
+    VectorXd b_(nr);
+    RandomPolytope(center, in_radius, A_, b_);
+    A.resize(nr + 6, 3);
+    b.resize(nr + 6);
+    A.topRows(nr) = A_;
+    A.middleRows<3>(nr) = MatrixXd::Identity(3, 3);
+    A.bottomRows<3>() = -MatrixXd::Identity(3, 3);
+    b.head(nr) = b_;
+    b.tail<6>() = half_side_len * VectorXd::Ones(6);
+  }
+  if (true) {
+    // Regular dodecahedron
+    const double a1 = 0.52573;
+    const double a2 = 0.85065;
+    const double a3 = 2.0 * 1.37638;
+
+    A.resize(12, 3);
+    A << a1, a2, 0.0,   //
+        a1, -a2, 0.0,   //
+        -a1, a2, 0.0,   //
+        -a1, -a2, 0.0,  //
+        0.0, a1, a2,    //
+        0.0, a1, -a2,   //
+        0.0, -a1, a2,   //
+        0.0, -a1, -a2,  //
+        a2, 0.0, a1,    //
+        -a2, 0.0, a1,   //
+        a2, 0.0, -a1,   //
+        -a2, 0.0, -a1;
+    b = a3 * VectorXd::Ones(12);
+
+    MatrixXd R(3, 3);
+    RandomRotation<3>(R);
+    A = A * R.transpose();
+  }
+
+  Ab.resize(A.rows(), 4);
+  Ab.leftCols(3) = A;
+  Ab.col(3) = b;
+
   return std::make_shared<StaticPolytope<3>>(A, b, center, margin, sc_modulus,
                                              true);
 }
@@ -120,7 +151,7 @@ std::shared_ptr<ConvexSet> GetRobotSafeRegion(int type) {
   Q << 3.0, 1.0, 0.0,  //
       1.0, 2.0, 0.0,   //
       0.0, 0.0, 1.0;
-  coeff << 1.0, 0.5, 1.0, 0.0;  // [, , 1/m, ]
+  coeff << 1.0, 0.8, 1.0, 0.0;  // [, , 1/m, ]
   margin = 0.0;
   const std::shared_ptr<ConvexSet> uncertainty =
       std::make_shared<QuadrotorUncertainty>(Q, coeff, margin);
@@ -211,8 +242,8 @@ struct Trajectory {
 void GetDesiredTrajectory(double t, Trajectory& trajectory) {
   assert(t >= 0);
 
-  const double scale = 2.0;
-  const double radius = 7.0;                           // [m]
+  const double scale = 3.0;
+  const double radius = 6.0;                           // [m]
   const double T_xy = 10.0 * scale;                    // [s]
   const double height = 3.0;                           // [m]
   const double T_z = 11.0 * scale;                     // [s]

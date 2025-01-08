@@ -236,6 +236,7 @@ struct Logs {
   MatrixXd z_opt_norm;
   MatrixXd lambda_err_norm;
   MatrixXd lambda_opt_norm;
+  VectorXd margin2;
   int num_opt_solves;
 
   Logs(int Nlog, int num_cps, int nx)
@@ -252,6 +253,7 @@ struct Logs {
         z_opt_norm(num_cps, Nlog),
         lambda_err_norm(num_cps, Nlog),
         lambda_opt_norm(num_cps, Nlog),
+        margin2(num_cps),
         num_opt_solves{0} {}
 
   void UpdateLogs(int i, const Environment& env, double solve_time_ode,
@@ -314,8 +316,10 @@ void Logs::SaveLogs(std::ofstream& outfile) {
 
   // Header
   outfile << "#collision pairs," << num_cps << std::endl
-          << "#ipopt solves," << num_opt_solves << std::endl;
-  outfile << "t (s),";
+          << "#ipopt solves," << num_opt_solves << std::endl
+          << "margin^2 (m^2)";
+  for (int i = 0; i < num_cps; ++i) outfile << "," << margin2(i);
+  outfile << std::endl << "t (s),";
   for (int i = 0; i < nx; ++i) outfile << "x_" << i << ",";
   outfile << "solve time (ode) (s),solve time (opt) (s),solve time (qp) (s),"
           << "dist2 (ode) (m^2)" << std::string(num_cps, ',')
@@ -375,6 +379,8 @@ int main() {
 
   // Control loop
   CbfQpController controller(env);
+  controller.get_margin2(log.margin2);
+
   auto start = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::high_resolution_clock::now() - start;
   VectorXd u_ref(4), u(4);

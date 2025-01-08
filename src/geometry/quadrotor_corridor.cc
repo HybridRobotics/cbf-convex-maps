@@ -48,7 +48,8 @@ const Derivatives& QuadrotorCorridor::UpdateDerivatives(const VectorXd& x,
   const double corridor_time =
       (stop_time_ + orientation_const_ * (1 + R.col(2).dot(nv)));
   const auto q = v * corridor_time;
-  const double q_max = max_vel_ * (stop_time_ + 2 * orientation_const_);
+  const double q_max =
+      kQScale * max_vel_ * (stop_time_ + 2 * orientation_const_);
   const double q_norm = std::sqrt(std::pow(kEps * q_max, 2) + q.dot(q));
   const auto nq = q / q_norm;
   const auto q_dot =

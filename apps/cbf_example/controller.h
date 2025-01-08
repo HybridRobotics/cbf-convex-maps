@@ -123,6 +123,8 @@ class CbfQpController {
 
   void Control(const Environment& env, const VectorXd& u_ref, VectorXd& u);
 
+  void get_margin2(VectorXd& margin2);
+
  private:
   static constexpr double kEps = 0.2;
   static constexpr double kVel = 0.1;          // < 1.0
@@ -291,6 +293,10 @@ inline void CbfQpController::Control(const Environment& env,
     u.tail<3>() = So3PTrackingControl(R, MatrixXd::Identity(3, 3),
                                       VectorXd::Zero(3), {3.0, 0.0});
   }
+}
+
+inline void CbfQpController::get_margin2(VectorXd& margin2) {
+  margin2 = margin2_;
 }
 
 }  // namespace
