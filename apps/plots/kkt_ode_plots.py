@@ -1,76 +1,14 @@
-import csv
 import os
-from collections import OrderedDict
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from utils.datalog import read_kkt_ode_logs
 
 mpl.rcParams["mathtext.fontset"] = "cm"
 mpl.rcParams["font.family"] = "STIXGeneral"
 
 _DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-
-
-def _read_logs(filename: str) -> dict:
-    log = OrderedDict()
-    log["t_seq"] = []
-    log["x"] = []
-    log["solve_time_ode"] = []
-    log["solve_time_opt"] = []
-    log["dist2_ode"] = []
-    log["dist2_opt"] = []
-    log["Ddist2_ode"] = []
-    log["z_err_norm"] = []
-    log["z_opt_norm"] = []
-    log["lambda_err_norm"] = []
-    log["lambda_opt_norm"] = []
-    log["dual_inf_err_norm"] = []
-    log["prim_inf_err_norm"] = []
-    log["compl_err_norm"] = []
-
-    num_opt_solves = 0
-    nr = 0
-    data_start = 0
-    A, b = np.empty((0, 3)), np.empty((0,))
-    with open(filename, "r") as file:
-        reader = csv.reader(file, delimiter=",")
-        for k, row in enumerate(reader):
-            # Headers
-            if k == 0:
-                num_opt_solves = float(row[-1])
-                continue
-            elif k == 1:
-                nr = int(row[-1])
-                data_start = 3 + nr
-                A, b = np.zeros((nr, 3)), np.zeros((nr,))
-                continue
-            elif k < data_start:
-                if k == data_start - 1:
-                    continue
-                A[k - 2, :] = np.array([float(row[i]) for i in range(3)])
-                b[k - 2] = float(row[-1])
-                continue
-            # Data
-            rowf = [float(value) for value in row]
-            for i, key in enumerate(log):
-                if i == 0:
-                    log[key].append(rowf[i])
-                elif i == 1:
-                    log[key].append([rowf[j] for j in range(1, 16)])
-                else:
-                    log[key].append(rowf[i + 14])
-    for key in log:
-        log[key] = np.array(log[key])
-    log["x"] = log["x"].T
-    log["num_opt_solves"] = num_opt_solves
-    log["A"] = A
-    log["b"] = b
-    log["t_0"] = log["t_seq"][0]
-    log["T"] = log["t_seq"][-1]
-    log["dt"] = log["t_seq"][1] - log["t_0"]
-
-    return log
 
 
 def _print_statistics(log: dict) -> None:
@@ -127,14 +65,16 @@ def _print_statistics(log: dict) -> None:
 
     # Fraction of ipopt solves.
     num_opt_solves = int(log["num_opt_solves"])
-    frac_opt = num_opt_solves / len(log["t_seq"])
+    Nlog = len(log["t_seq"])
+    frac_opt = num_opt_solves / Nlog
+    print(f"Number of solution steps: {Nlog:5d}")
     print(f"Number of ipopt solves  : {num_opt_solves:5d}")
     print(f"Fraction of ipopt solves: {frac_opt:5.3f}")
 
     # Tracking error.
     scale = 2.0
-    radius = 7.0  # [m].
-    T_xy = 10.0 * scale  # [s].
+    radius = 6.0  # [m].
+    T_xy = 20.0 * scale  # [s].
     height = 3.0  # [m].
     T_z = 11.0 * scale  # [s].
     f_xy = 2 * np.pi / T_xy
@@ -153,14 +93,14 @@ def _print_statistics(log: dict) -> None:
     p_err = np.linalg.norm(p - pd, axis=0)
     v_err = np.linalg.norm(v - vd, axis=0)
 
-    plt.plot(t_seq, p_err, "-b")
-    plt.plot(t_seq, v_err, "-r")
-    plt.show()
+    # plt.plot(t_seq, p_err, "-b")
+    # plt.plot(t_seq, v_err, "-r")
+    # plt.show()
 
 
 def _plot_data(log: dict):
-    fig_width = 3.54  # [inch].
-    fig_height = 2.0  # [inch].
+    fig_width = 2.57  # 3.54  # [inch].
+    fig_height = 1.75  # [inch].
     fig_dpi = 200
     save_dpi = 1000  # >= 600
     save_fig = False
@@ -181,7 +121,7 @@ def _plot_data(log: dict):
     Ddist_err = Ddist_opt - Ddist_ode
 
     ## Plot 1: KKT error.
-    sp = 10
+    sp = 21
     fig, ax = plt.subplots(
         1,
         1,
@@ -197,28 +137,29 @@ def _plot_data(log: dict):
         t_seq[::sp],
         lambda_rel_err_max[::sp],
         "-.r",
-        lw=1,
+        lw=0.75,
         label=r"$|\Delta \lambda^*(t)|/|\lambda^*(t)|$",
     )
     ax.plot(
         t_seq[::sp],
         z_rel_err_max[::sp],
         "-b",
-        lw=1,
+        lw=0.75,
         label=r"$|\Delta z^*(t)|/|z^*(t)|$",
     )
     # Plot properties.
     ax.grid(axis="y", lw=0.25, alpha=0.5)
     ax.set_yscale("log")
     ax.set_xlabel(r"$t$ $(s)$", **font_dict)
-    ax.set_ylabel(r"relative error", **font_dict)
-    ax.legend(
+    ax.set_ylabel(r"relative KKT error", **font_dict)
+    leg = ax.legend(
         loc="upper right",
         fontsize=font_size,
-        framealpha=0.5,
+        framealpha=1.0,
         fancybox=False,
         edgecolor="black",
     )
+    leg.get_frame().set_linewidth(0.75)
     ax.tick_params(axis="both", which="major", labelsize=font_size)
     # ax.set_xticks([])
     ax.yaxis.set_major_locator(mpl.ticker.LogLocator(base=10, numticks=3))
@@ -227,82 +168,90 @@ def _plot_data(log: dict):
     )
     ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     ax.margins(axis_margins, axis_margins)
-    ax.set_ylim([1e-4, 1e-2])
-
-    plt.show()
-
-    if save_fig:
-        fig.savefig(_DIR_PATH + "/kkt_err.png", dpi=save_dpi)  # , bbox_inches='tight')
-
-    ## Plot 2: Minimum distance error.
-    sp = 10
-    fig, ax = plt.subplots(
-        1,
-        1,
-        figsize=(fig_width, fig_height),
-        dpi=fig_dpi,
-        sharey=False,
-        layout="constrained",
-    )
-    ax.spines.top.set_visible(False)
-    ax.spines.right.set_visible(False)
-    # Line plots.
-    ax.plot(t_seq[::sp], dist_rel_err[::sp], "-b", lw=1, label=r"$\Delta h(t)/h(t)$")
-    # Plot properties.
-    ax.grid(axis="y", lw=0.25, alpha=0.5)
-    ax.set_xlabel(r"$t$ $(s)$", **font_dict)
-    ax.set_ylabel(r"relative error", **font_dict)
-    ax.legend(
-        loc="upper right",
-        fontsize=font_size,
-        framealpha=0.5,
-        fancybox=False,
-        edgecolor="black",
-    )
-    ax.tick_params(axis="both", which="major", labelsize=font_size)
-    ax.margins(axis_margins, axis_margins)
-    ax.set_ylim([0, 4e-4])
-
-    plt.show()
-
-    if save_fig:
-        fig.savefig(_DIR_PATH + "/dist_err.png", dpi=save_dpi)  # , bbox_inches='tight')
-
-    ## Plot 3: Minimum distance Derivative error.
-    sp = 10
-    fig, ax = plt.subplots(
-        1,
-        1,
-        figsize=(fig_width, fig_height),
-        dpi=fig_dpi,
-        sharey=False,
-        layout="constrained",
-    )
-    ax.spines.top.set_visible(False)
-    ax.spines.right.set_visible(False)
-    # Line plots.
-    ax.plot(t_seq[::sp], np.zeros_like(t_seq[::sp]), "--r", lw=1)
-    ax.plot(t_seq[::sp], Ddist_err[::sp], "-b", lw=1, label=r"$\Delta \dot{h}(t)$")
-    # Plot properties.
-    ax.grid(axis="y", lw=0.25, alpha=0.5)
-    ax.set_xlabel(r"$t$ $(s)$", **font_dict)
-    ax.set_ylabel(r"error $(m/s)$", **font_dict)
-    ax.legend(
-        loc="upper right",
-        fontsize=font_size,
-        framealpha=0.5,
-        fancybox=False,
-        edgecolor="black",
-    )
-    ax.tick_params(axis="both", which="major", labelsize=font_size)
-    ax.margins(axis_margins, axis_margins)
-    ax.set_ylim([-1e-2, 5e-2])
+    ax.set_ylim([5e-5, 2e-3])
 
     plt.show()
 
     if save_fig:
         fig.savefig(
-            _DIR_PATH + "/Ddist_err.png", dpi=save_dpi
+            _DIR_PATH + "/kkt_ode_kkt_err.png", dpi=save_dpi
+        )  # , bbox_inches='tight')
+
+    ## Plot 2: Minimum distance error.
+    sp = 20
+    fig, ax = plt.subplots(
+        1,
+        1,
+        figsize=(fig_width, fig_height),
+        dpi=fig_dpi,
+        sharey=False,
+        layout="constrained",
+    )
+    ax.spines.top.set_visible(False)
+    ax.spines.right.set_visible(False)
+    # Line plots.
+    ax.plot(t_seq[::sp], dist_rel_err[::sp], "-b", lw=0.75, label=r"$\Delta h(t)/h(t)$")
+    # Plot properties.
+    ax.grid(axis="y", lw=0.25, alpha=0.5)
+    ax.set_xlabel(r"$t$ $(s)$", **font_dict)
+    ax.set_ylabel(r"relative distance error", **font_dict)
+    leg = ax.legend(
+        loc="upper left",
+        fontsize=font_size,
+        framealpha=1.0,
+        fancybox=False,
+        edgecolor="black",
+    )
+    leg.get_frame().set_linewidth(0.75)
+    ax.tick_params(axis="both", which="major", labelsize=font_size)
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(1e-2, 0.0))
+    ax.margins(axis_margins, axis_margins)
+    ax.set_ylim([0, 1e-4])
+
+    plt.show()
+
+    if save_fig:
+        fig.savefig(
+            _DIR_PATH + "/kkt_ode_dist_err.png", dpi=save_dpi
+        )  # , bbox_inches='tight')
+
+    ## Plot 3: Minimum distance Derivative error.
+    sp = 23
+    fig, ax = plt.subplots(
+        1,
+        1,
+        figsize=(fig_width, fig_height),
+        dpi=fig_dpi,
+        sharey=False,
+        layout="constrained",
+    )
+    ax.spines.top.set_visible(False)
+    ax.spines.right.set_visible(False)
+    # Line plots.
+    # ax.plot(t_seq[::sp], np.zeros_like(t_seq[::sp]), "--r", lw=0.75)
+    ax.plot(t_seq[::sp], Ddist_err[::sp], "-b", lw=0.75, label=r"$\Delta \dot{h}(t)$")
+    # Plot properties.
+    ax.grid(axis="y", lw=0.25, alpha=0.5)
+    ax.set_xlabel(r"$t$ $(s)$", **font_dict)
+    ax.set_ylabel(r"distance derivative" "\n" r"error $(m/s)$", **font_dict)
+    leg = ax.legend(
+        loc="upper right",
+        fontsize=font_size,
+        framealpha=1.0,
+        fancybox=False,
+        edgecolor="black",
+    )
+    leg.get_frame().set_linewidth(0.75)
+    ax.tick_params(axis="both", which="major", labelsize=font_size)
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(1e-2, 0.0))
+    ax.margins(axis_margins, axis_margins)
+    # ax.set_ylim([-1e-2, 5e-2])
+
+    plt.show()
+
+    if save_fig:
+        fig.savefig(
+            _DIR_PATH + "/kkt_ode_Ddist_err.png", dpi=save_dpi
         )  # , bbox_inches='tight')
 
 
@@ -311,6 +260,6 @@ if __name__ == "__main__":
     type = 0  # 0, 1, or 2.
 
     filename = _DIR_PATH + relative_path + "/kkt_ode_data_" + str(type) + ".csv"
-    log = _read_logs(filename)
+    log = read_kkt_ode_logs(filename)
     _print_statistics(log)
     _plot_data(log)

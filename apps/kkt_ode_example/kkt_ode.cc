@@ -242,19 +242,21 @@ struct Trajectory {
 void GetDesiredTrajectory(double t, Trajectory& trajectory) {
   assert(t >= 0);
 
-  const double scale = 3.0;
+  const double scale = 2.0;
   const double radius = 6.0;                           // [m]
-  const double T_xy = 10.0 * scale;                    // [s]
+  const double T_xy = 20.0 * scale;                    // [s]
   const double height = 3.0;                           // [m]
   const double T_z = 11.0 * scale;                     // [s]
-  const Eigen::Vector3d w(0.0, 0.0, 2.0 * kPi / 9.0);  // [rad/s]
+  const Eigen::Vector3d w(0.0, 0.0, 0.0 * kPi / 9.0);  // [rad/s]
 
   Eigen::Vector3d p, v, a;
   const double f_xy = 2.0 * kPi / T_xy;
   const double f_z = 2.0 * kPi / T_z;
-  p << radius * std::cos(f_xy * t), radius * std::sin(f_xy * t),
+  p << radius * std::cos(f_xy * t),  //
+      radius * std::sin(f_xy * t),   //
       height * std::sin(f_z * t);
-  v << -radius * f_xy * std::sin(f_xy * t), radius * f_xy * std::cos(f_xy * t),
+  v << -radius * f_xy * std::sin(f_xy * t),  //
+      radius * f_xy * std::cos(f_xy * t),    //
       height * f_z * std::cos(f_z * t);
   a << -radius * f_xy * f_xy * std::cos(f_xy * t),
       -radius * f_xy * f_xy * std::sin(f_xy * t),
@@ -280,12 +282,12 @@ void GetTrackingControl(const std::shared_ptr<DynamicalSystem>& sys,
   const auto ad = trajectory.ad;
   const auto wd = trajectory.wd;
 
-  const double k_p = 1.0;
-  const double k_d = 1.0;
-  const double k_R = 5.0;
+  const double k_p = 10.0;
+  const double k_d = 5.0;
+  const double k_R = 6.0;
   const double mass = 0.5;                  // [kg]
   const Eigen::Vector3d g(0.0, 0.0, 9.81);  // [m/s^2]
-  const double max_acc = 3.0 / 4.0 * g.norm();
+  const double max_acc = 3.0 / 4.0 * g(2);
 
   VectorXd a_ref = ad - k_p * (p - pd) - k_d * (v - vd);
   const double norm = a_ref.norm();
@@ -440,7 +442,7 @@ void Logs::SaveLogs(std::ofstream& outfile) {
 int main() {
   // Set time sequences
   const double t_0 = 0.0;  // [s]
-  const double T = 50.0;   // [s]
+  const double T = 100.0;  // [s]
   double dt = 1e-3;
   const int N = static_cast<int>(std::ceil(T / dt));
   const auto t_seq = VectorXd::LinSpaced(N, t_0, T);
