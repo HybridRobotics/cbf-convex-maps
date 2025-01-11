@@ -20,14 +20,11 @@ _DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 _QUADROTOR_OBJ_PATH = _DIR_PATH + "/quadrotor.obj"
 _QUADROTOR_OBJ = gm.ObjMeshGeometry.from_file(_QUADROTOR_OBJ_PATH)
 _QUADROTOR_SHAPE_MESH = mesh_from_implicit_function(
-    qshape_implicit_function,
-    dz=0.075,
-    z_lim=[[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]],
+    qshape_implicit_function, dz=0.075, z_lim=[[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]]
 )
 _QUADROTOR_UNCERTAINTY_MESH = mesh_from_implicit_function(
     lambda Z: quncertainty_implicit_function(
-        Z,
-        np.hstack([np.zeros((6,)), np.identity(3).reshape((-1,))]),
+        Z, np.hstack([np.zeros((6,)), np.identity(3).reshape((-1,))])
     ),
     dz=0.25,
     z_lim=[[-1.5, 1.5], [-1.5, 1.5], [-1.5, 1.5]],
@@ -44,7 +41,7 @@ _MESH_MATERIAL = gm.MeshBasicMaterial(
 )
 
 
-def _minkowski_sum_snapshot(vis: Visualizer) -> None:
+def _safe_region_snapshot(vis: Visualizer) -> None:
     # Remove grid.
     vis["/Grid"].set_property("visible", False)
     vis["/Axes"].set_property("visible", False)
@@ -90,10 +87,7 @@ def _add_obstacle(vis: Visualizer, log: dict) -> None:
 
 
 def _add_quadrotor(vis: Visualizer, x: np.ndarray, name: str) -> None:
-    vis[name]["quad"].set_object(
-        _QUADROTOR_OBJ,
-        _QUADROTOR_MATERIAL,
-    )
+    vis[name]["quad"].set_object(_QUADROTOR_OBJ, _QUADROTOR_MATERIAL)
     x_ = np.hstack([np.zeros((6,)), np.identity(3).reshape((-1,))])
     Z_ = [np.array([0.0])] * 3
     level0 = quncertainty_implicit_function(Z_, x_)
@@ -154,4 +148,4 @@ if __name__ == "__main__":
     # Snapshots.
     timestamps = np.array([0.0, 0.05, 0.15, 0.25, 0.35, 0.5, 0.7, 1.0])
     _snapshot(log, vis, timestamps)
-    # _minkowski_sum_snapshot(vis)
+    # _safe_region_snapshot(vis)
