@@ -42,10 +42,12 @@ const Derivatives& QuadrotorUncertainty::UpdateDerivatives(
 
   const auto p = x.head<3>();
   const auto R = x.tail<9>().reshaped(3, 3);
-  const auto zb = R.transpose() * (z - p);
+  // const auto zb = R.transpose() * (z - p);
+  const auto zb = R.transpose() * z;
   const auto v = x.segment<3>(3);
   const auto R_dot = dx.tail<9>().reshaped(3, 3);
-  const auto zb_dot = R_dot.transpose() * (z - p) - R.transpose() * v;
+  // const auto zb_dot = R_dot.transpose() * (z - p) - R.transpose() * v;
+  const auto zb_dot = R_dot.transpose() * z;
 
   const auto grad = 2 * Q_ * zb;
 
@@ -87,14 +89,16 @@ void QuadrotorUncertainty::LieDerivatives(const VectorXd& x, const VectorXd& z,
 
   const auto p = x.head<3>();
   const auto R = x.tail<9>().reshaped(3, 3);
-  const auto zb = R.transpose() * (z - p);
+  // const auto zb = R.transpose() * (z - p);
+  const auto zb = R.transpose() * z;
 
   const auto grad = 2 * Q_ * zb;
 
   for (int i = 0; i < fg.cols(); ++i) {
     const auto v = fg.col(i).head<3>();
     const auto R_dot = fg.col(i).tail<9>().reshaped(3, 3);
-    const auto zb_dot = R_dot.transpose() * (z - p) - R.transpose() * v;
+    // const auto zb_dot = R_dot.transpose() * (z - p) - R.transpose() * v;
+    const auto zb_dot = R_dot.transpose() * z;
 
     const double level_dot = 2 / kPi * coeff_(1) * coeff_(2) * v(2) /
                              (1 + std::pow(coeff_(2) * p(2) + coeff_(3), 2));

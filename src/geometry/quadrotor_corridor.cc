@@ -35,7 +35,7 @@ const Derivatives& QuadrotorCorridor::UpdateDerivatives(const VectorXd& x,
   assert(z.rows() == kNz);
   assert(y.rows() == kNr);
 
-  const auto p = x.head<3>();
+  // const auto p = x.head<3>();
   const auto R = x.tail<9>().reshaped(3, 3);
   const auto v = x.segment<3>(3);
   const auto a = dx.segment<3>(3);
@@ -57,15 +57,21 @@ const Derivatives& QuadrotorCorridor::UpdateDerivatives(const VectorXd& x,
       v * orientation_const_ * (R.col(2).dot(nv_dot) + R_dot.col(2).dot(nv));
   const auto nq_dot = (q_dot - nq * nq.dot(q_dot)) / q_norm;
 
-  const auto zb = z - p - q / 2;
-  const auto zb_dot = -v - q_dot / 2;
+  // const auto zb = z - p - q / 2;
+  const auto zb = z - q / 2;
+  // const auto zb_dot = -v - q_dot / 2;
+  const auto zb_dot = -q_dot / 2;
 
   const auto Q = kEcc * kEcc * MatrixXd::Identity(3, 3) -
                  (kEcc * kEcc - 1) * nq * nq.transpose();
 
   if (has_flag(flag, DerivativeFlags::f)) {
     const double func = zb.transpose() * Q * zb;
-    const double level = std::pow(kMin + q_norm / 2, 2);
+    // const double level = std::pow(kMin + q_norm / 2, 2);
+    const double level =
+        kMin * kMin +
+        q.dot(q) / 4.0 *
+            (1.0 + (kEcc * kEcc - 1) * std::pow(kEps * q_max / q_norm, 2));
     derivatives_.f(0) = func - level;
   }
   if (has_flag(flag, DerivativeFlags::f_z)) {
@@ -80,7 +86,11 @@ const Derivatives& QuadrotorCorridor::UpdateDerivatives(const VectorXd& x,
       has_flag(flag, DerivativeFlags::f_xz_y)) {
     const auto Q_dot = -(kEcc * kEcc - 1) *
                        (nq * nq_dot.transpose() + nq_dot * nq.transpose());
-    const double level_dot = (kMin + q_norm / 2) * nq.dot(q_dot);
+    // const double level_dot = (kMin + q_norm / 2) * nq.dot(q_dot);
+    const double level_dot =
+        q.dot(q_dot) / 2.0 *
+        (1.0 + (kEcc * kEcc - 1) * std::pow(kEps * q_max / q_norm, 2) *
+                   (1.0 - q.dot(q) / std::pow(q_norm, 2)));
     derivatives_.f_x(0) =
         zb.transpose() * (2 * Q * zb_dot + Q_dot * zb) - level_dot;
     derivatives_.f_xz_y = 2 * y(0) * (Q_dot * zb + Q * zb_dot);
@@ -98,14 +108,15 @@ void QuadrotorCorridor::LieDerivatives(const VectorXd& x, const VectorXd& z,
   assert(L_fg_y.rows() == 1);
   assert(L_fg_y.cols() == fg.cols());
 
-  const auto p = x.head<3>();
+  // const auto p = x.head<3>();
   const auto R = x.tail<9>().reshaped(3, 3);
   const auto v = x.segment<3>(3);
 
-  const double q_max = max_vel_ * (stop_time_ + 2 * orientation_const_);
+  const double q_max =
+      kQScale * max_vel_ * (stop_time_ + 2 * orientation_const_);
 
   for (int i = 0; i < fg.cols(); ++i) {
-    const auto vi = fg.col(i).head<3>();
+    // const auto vi = fg.col(i).head<3>();
     const auto a = fg.col(i).segment<3>(3);
     const auto R_dot = fg.col(i).tail<9>().reshaped(3, 3);
 
@@ -123,14 +134,20 @@ void QuadrotorCorridor::LieDerivatives(const VectorXd& x, const VectorXd& z,
         v * orientation_const_ * (R.col(2).dot(nv_dot) + R_dot.col(2).dot(nv));
     const auto nq_dot = (q_dot - nq * nq.dot(q_dot)) / q_norm;
 
-    const auto zb = z - p - q / 2;
-    const auto zb_dot = -vi - q_dot / 2;
+    // const auto zb = z - p - q / 2;
+    const auto zb = z - q / 2;
+    // const auto zb_dot = -vi - q_dot / 2;
+    const auto zb_dot = -q_dot / 2;
 
     const auto Q = kEcc * kEcc * MatrixXd::Identity(3, 3) -
                    (kEcc * kEcc - 1) * nq * nq.transpose();
     const auto Q_dot = -(kEcc * kEcc - 1) *
                        (nq * nq_dot.transpose() + nq_dot * nq.transpose());
-    const double level_dot = (kMin + q_norm / 2) * nq.dot(q_dot);
+    // const double level_dot = (kMin + q_norm / 2) * nq.dot(q_dot);
+    const double level_dot =
+        q.dot(q_dot) / 2.0 *
+        (1.0 + (kEcc * kEcc - 1) * std::pow(kEps * q_max / q_norm, 2) *
+                   (1.0 - q.dot(q) / std::pow(q_norm, 2)));
 
     L_fg_y(0, i) =
         y(0) * (zb.transpose() * (2 * Q * zb_dot + Q_dot * zb) - level_dot);
