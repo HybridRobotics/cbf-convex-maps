@@ -220,11 +220,7 @@ def _dodecahedron_vertices() -> None:
     vertices = []
     for i in range(8):
         vertices.append(
-            [
-                (-1) ** (i % 2),
-                (-1) ** ((i // 2) % 2),
-                (-1) ** ((i // 4) % 2),
-            ]
+            [(-1) ** (i % 2), (-1) ** ((i // 2) % 2), (-1) ** ((i // 4) % 2)]
         )
     for i in range(4):
         a = (-1) ** (i % 2) * golden
@@ -247,10 +243,7 @@ def _dodecahedron_vertices() -> None:
         vis = meshcat.Visualizer()
         vis.open()
         material = gm.MeshLambertMaterial(
-            color=0xFFFFFF,
-            wireframe=False,
-            opacity=1,
-            reflectivity=0.5,
+            color=0xFFFFFF, wireframe=False, opacity=1, reflectivity=0.5
         )
         faces = faces_from_vertex_rep(vertices)
         normals = normals_from_vertex_face(vertices, faces)

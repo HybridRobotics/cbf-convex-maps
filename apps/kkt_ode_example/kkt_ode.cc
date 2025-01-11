@@ -157,8 +157,8 @@ std::shared_ptr<ConvexSet> GetRobotSafeRegion(int type) {
       std::make_shared<QuadrotorUncertainty>(Q, coeff, margin);
 
   // Quadrotor corridor set
-  const double stop_time = 2.0;         // [s]
-  const double orientation_cost = 1.0;  // [s]
+  const double stop_time = 1.0;         // [s]
+  const double orientation_cost = 0.5;  // [s]
   const double max_vel = 1.0;           // [m/s]
   margin = 0.0;                         // [m]
   const std::shared_ptr<ConvexSet> corridor =
@@ -439,7 +439,14 @@ void Logs::SaveLogs(std::ofstream& outfile) {
 
 }  // namespace
 
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc < 2) {
+    std::cerr << "Please provide an integer as a command line argument."
+              << std::endl;
+    return 1;
+  }
+  const int type = std::atoi(argv[1]);
+
   // Set time sequences
   const double t_0 = 0.0;  // [s]
   const double T = 100.0;  // [s]
@@ -454,7 +461,6 @@ int main() {
 
   // Get environment, and initialize states and minimum distance
   Environment env;
-  const int type = 0;
   SetupEnvironment(type, dt, env);
   GetDesiredTrajectory(t_0, trajectory);
   env.set_state(trajectory.pd, trajectory.vd, Eigen::Matrix3d::Identity());
