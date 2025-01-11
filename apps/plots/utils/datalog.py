@@ -65,7 +65,7 @@ def read_kkt_ode_logs(filename: str) -> dict:
     return log
 
 
-def read_cbf_logs(filename: str) -> dict:
+def read_ma_cbf_logs(filename: str) -> dict:
     log = OrderedDict()
     log["t_seq"] = []
     log["x"] = []
@@ -80,23 +80,23 @@ def read_cbf_logs(filename: str) -> dict:
     log["lambda_err_norm"] = []
     log["lambda_opt_norm"] = []
 
-    num_opt_solves = 0
+    num_obs = 0
+    num_sys = 0
+    num_obs_cps = 0
+    num_sys_cps = 0
     num_cps = 0
-    margin2 = []
+    num_opt_solves = 0
     with open(filename, "r") as file:
         reader = csv.reader(file, delimiter=",")
         for k, row in enumerate(reader):
             # Headers
-            if k == 0:
-                num_cps = int(row[-1])
+            if k == 1:
+                num_obs, num_sys = int(row[0]), int(row[1])
+                num_obs_cps, num_sys_cps = int(row[2]), int(row[3])
+                num_cps = int(row[4])
+                num_opt_solves = int(row[5])
                 continue
-            elif k == 1:
-                num_opt_solves = int(row[-1])
-                continue
-            elif k == 2:
-                margin2 = np.array([float(row[i]) for i in range(1, num_cps + 1)])
-                continue
-            elif k < 4:
+            elif k < 3:
                 continue
             # Data
             rowf = [float(value) for value in row]
@@ -104,18 +104,13 @@ def read_cbf_logs(filename: str) -> dict:
                 if i == 0:
                     log[key].append(rowf[i])
                 elif i == 1:
-                    log[key].append([rowf[j] for j in range(1, 16)])
+                    log[key].append([rowf[j] for j in range(1, 1 + 15 * num_sys)])
                 elif i <= 4:
-                    log[key].append(rowf[i + 14])
+                    idx = 1 + 15 * num_sys
+                    log[key].append(rowf[idx + i - 2])
                 else:
-                    log[key].append(
-                        [
-                            rowf[j]
-                            for j in range(
-                                19 + (i - 5) * num_cps, 19 + (i - 4) * num_cps
-                            )
-                        ]
-                    )
+                    idx = 1 + 15 * num_sys + 3 + (i - 5) * num_cps
+                    log[key].append([rowf[j] for j in range(idx, idx + num_cps)])
     for key in log:
         log[key] = np.array(log[key])
     log["x"] = log["x"].T
@@ -126,9 +121,12 @@ def read_cbf_logs(filename: str) -> dict:
     log["z_opt_norm"] = log["z_opt_norm"].T
     log["lambda_err_norm"] = log["lambda_err_norm"].T
     log["lambda_opt_norm"] = log["lambda_opt_norm"].T
+    log["num_obs"] = num_obs
+    log["num_sys"] = num_sys
+    log["num_obs_cps"] = num_obs_cps
+    log["num_sys_cps"] = num_sys_cps
     log["num_cps"] = num_cps
     log["num_opt_solves"] = num_opt_solves
-    log["margin2"] = margin2
     log["t_0"] = log["t_seq"][0]
     log["T"] = log["t_seq"][-1]
     log["dt"] = log["t_seq"][1] - log["t_0"]
