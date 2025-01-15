@@ -80,7 +80,7 @@ def _plot_data(log: dict):
     dist_opt_avg = np.mean(dist_opt, axis=0)
     dist_opt_min = np.min(dist_opt, axis=0)
     dist_opt_max = np.max(dist_opt, axis=0)
-    margin_min = 0.1  # [m].
+    margin_min = 0.2  # [m].
     z_rel_err = log["z_err_norm"] / log["z_opt_norm"]
     z_rel_err_avg = np.mean(z_rel_err, axis=0)
     z_rel_err_min = np.min(z_rel_err, axis=0)
@@ -102,7 +102,7 @@ def _plot_data(log: dict):
     Ddist_err_max = np.max(Ddist_err, axis=0)
 
     ## Plot 1: Minimum distance.
-    sp = 1
+    sp = 20
     fig, ax = plt.subplots(
         1,
         1,
@@ -319,6 +319,13 @@ def _plot_data(log: dict):
         fig.savefig(
             _DIR_PATH + "/cbf_Ddist_err.png", dpi=save_dpi
         )  # , bbox_inches='tight')
+
+    x = log["x"]
+    speed = np.linalg.norm(x[3:6, :], axis=0)
+    quad_angle = x[-1, :]
+    plt.plot(speed)
+    plt.plot(quad_angle)
+    plt.show()
 
 
 if __name__ == "__main__":

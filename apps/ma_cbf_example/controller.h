@@ -29,6 +29,7 @@ const double kGravity = 9.81;  // [m/s^2]
 struct Environment {
   // Quadrotor-obstacle collision pairs
   int num_obs;
+  MatrixXd centers;
   std::vector<std::shared_ptr<CollisionPair>> obs_cps;
   // (Reduced-order) quadrotor systems and inter-robot collision pairs
   int num_sys;
@@ -249,6 +250,7 @@ inline void CbfQpController::Control(const Environment& env,
     gradient_.segment<3>(4 * i + 1) = -kRefOmega * u_refi.tail<3>();
   }
 
+  bool use_backup_control = false;
   // Strongly convex map CBF constraints
   const MatrixXd fg_obs(0, 1);
   std::vector<MatrixXd> fg_sys(num_sys_);
@@ -266,6 +268,7 @@ inline void CbfQpController::Control(const Environment& env,
       const double h_dist =
           env.obs_cps[idx]->get_minimum_distance() - margin2_(idx);
       const double dist_cbf_lb = -kAlphaDistCbf * h_dist - L_fg_sys1(0, 0);
+      // if (h_dist <= -margin2_(idx) / 1.0) use_backup_control = true;
 
       for (int k = 0; k < 4; ++k)
         constraint_mat_.coeffRef(idx, 4 * i + k) = L_fg_sys1(0, k + 1);
@@ -283,6 +286,7 @@ inline void CbfQpController::Control(const Environment& env,
           margin2_(idx);
       const double dist_cbf_lb =
           -kAlphaDistCbf * h_dist - L_fg_sys1(0, 0) - L_fg_sys2(0, 0);
+      // if (h_dist <= -margin2_(idx) / 1.0) use_backup_control = true;
 
       for (int k = 0; k < 4; ++k) {
         constraint_mat_.coeffRef(idx, 4 * i + k) = L_fg_sys1(0, k + 1);
@@ -337,7 +341,8 @@ inline void CbfQpController::Control(const Environment& env,
 
   // Solve QP;
   // If not solved to optimality, use reference control
-  if (solver_.solveProblem() == OsqpEigen::ErrorExitFlag::NoError) {
+  if ((!use_backup_control) &&
+      (solver_.solveProblem() == OsqpEigen::ErrorExitFlag::NoError)) {
     const VectorXd solution = solver_.getSolution();
     u = solution;
   } else {

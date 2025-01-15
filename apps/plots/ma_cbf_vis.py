@@ -88,33 +88,60 @@ def _add_obstacle(vis: Visualizer, log: dict) -> None:
     # vis["/Background"].set_property("top_color", [0.9, 0.9, 0.9])
     vis["/Background"].set_property("bottom_color", [0.9, 0.9, 0.9])
 
-    # Draw obstacle polytopes.
-    A_obs, b_obs = [], []
-    # Obstacle 1: dodecahedron.
+    # Dodecahedron polytope.
     a1 = 0.52573
     a2 = 0.85065
     a3 = 1.37638
     # fmt: off
-    A_obs.append(
-        np.array(
-            [
-                [a1, a2, 0.0],
-                [a1, -a2, 0.0],
-                [-a1, a2, 0.0],
-                [-a1, -a2, 0.0],
-                [0.0, a1, a2],
-                [0.0, a1, -a2],
-                [0.0, -a1, a2],
-                [0.0, -a1, -a2],
-                [a2, 0.0, a1],
-                [-a2, 0.0, a1],
-                [a2, 0.0, -a1],
-                [-a2, 0.0, -a1],
-            ]
-        )
+    A_20 = np.array(
+        [
+            [a1, a2, 0.0],
+            [a1, -a2, 0.0],
+            [-a1, a2, 0.0],
+            [-a1, -a2, 0.0],
+            [0.0, a1, a2],
+            [0.0, a1, -a2],
+            [0.0, -a1, a2],
+            [0.0, -a1, -a2],
+            [a2, 0.0, a1],
+            [-a2, 0.0, a1],
+            [a2, 0.0, -a1],
+            [-a2, 0.0, -a1],
+        ]
     )
     # fmt: on
-    b_obs.append(a3 * np.ones((12,)))
+    b_20 = a3 * np.ones((12,))
+
+    # Draw obstacle polytopes.
+    A_obs, b_obs = [], []
+    #   Obstacle 1.
+    A_obs.append(A_20)
+    p = np.array([-7.0, 1.5, -0.0])
+    b_obs.append(b_20 + A_20 @ p)
+    #   Obstacle 2.
+    A_obs.append(A_20)
+    p = np.array([-6.0, -1.5, -2.0])
+    b_obs.append(b_20 + A_20 @ p)
+    #   Obstacle 3.
+    A_obs.append(A_20)
+    p = np.array([-3.5, 1.5, -2.5])
+    b_obs.append(b_20 + A_20 @ p)
+    #   Obstacle 4.
+    A_obs.append(A_20)
+    p = np.array([-0.0, 1.0, -1.5])
+    b_obs.append(b_20 + A_20 @ p)
+    #   Obstacle 5.
+    A_obs.append(A_20)
+    p = np.array([1.0, -1.0, -1.5])
+    b_obs.append(b_20 + A_20 @ p)
+    #   Obstacle 6.
+    A_obs.append(A_20)
+    p = np.array([4.0, 1.0, 1.0])
+    b_obs.append(b_20 + A_20 @ p)
+    #   Obstacle 7.
+    A_obs.append(A_20)
+    p = np.array([8.0, 0.0, -1.5])
+    b_obs.append(b_20 + A_20 @ p)
 
     num_obs = len(A_obs)
     for i, A, b in zip(range(num_obs), A_obs, b_obs):
@@ -122,6 +149,14 @@ def _add_obstacle(vis: Visualizer, log: dict) -> None:
         f = wavefront_virtual_file(vertices, faces)
         mesh = gm.ObjMeshGeometry.from_stream(f)
         vis["obstacle-" + str(i)].set_object(mesh, _OBSTACLE_MATERIAL)
+
+    # Walls
+    A = np.vstack([np.identity(3), -np.identity(3)])
+    b = np.array([10.0, 3.0, 3.0] * 2)
+    vertices, faces = vertex_face_from_halfspace_rep(A, b)
+    f = wavefront_virtual_file(vertices, faces)
+    mesh = gm.ObjMeshGeometry.from_stream(f)
+    vis["wall"].set_object(mesh, _MESH_MATERIAL)
 
 
 def _add_quadrotor(vis: Visualizer, x: np.ndarray, name: str, team: int) -> None:

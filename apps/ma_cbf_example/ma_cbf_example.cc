@@ -35,18 +35,17 @@ using namespace sccbf;
 
 namespace {
 
-void GetObstacle(std::vector<std::shared_ptr<ConvexSet>>& obs_vec) {
-  const int num_obs = 1;
-  obs_vec.resize(num_obs);
+void GetObstacle(std::vector<std::shared_ptr<ConvexSet>>& obs_vec,
+                 MatrixXd& centers) {
+  obs_vec.resize(0);
+  centers.resize(3, 0);
 
-  int i = 0;
   MatrixXd A;
   VectorXd b, p(3);
-  double margin = 0.05;  // [m]
+  double margin = 0.1;  // [m]
   double sc_modulus = 1e-2;
 
-  // Obstacle 1
-  i = 0;
+  // Dodecahedron polytope
   double a1 = 0.52573;
   double a2 = 0.85065;
   double a3 = 1.37638;
@@ -64,45 +63,122 @@ void GetObstacle(std::vector<std::shared_ptr<ConvexSet>>& obs_vec) {
       a2, 0.0, -a1,   //
       -a2, 0.0, -a1;
   b = a3 * VectorXd::Ones(12);
-  p = VectorXd::Zero(3);
-  obs_vec[i] =
-      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true);
+
+  // Obstacles
+  p << -7.0, 1.5, -0.0;
+  centers.conservativeResize(3, centers.cols() + 1);
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true));
+  centers.col(centers.cols() - 1) = p;
+
+  p << -6.0, -1.5, -2.0;
+  centers.conservativeResize(3, centers.cols() + 1);
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true));
+  centers.col(centers.cols() - 1) = p;
+
+  p << -3.5, 1.5, -2.5;
+  centers.conservativeResize(3, centers.cols() + 1);
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true));
+  centers.col(centers.cols() - 1) = p;
+
+  p << -0.0, 1.0, -1.5;
+  centers.conservativeResize(3, centers.cols() + 1);
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true));
+  centers.col(centers.cols() - 1) = p;
+
+  p << 1.0, -1.0, -1.5;
+  centers.conservativeResize(3, centers.cols() + 1);
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true));
+  centers.col(centers.cols() - 1) = p;
+
+  p << 4.0, 1.0, 1.0;
+  centers.conservativeResize(3, centers.cols() + 1);
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true));
+  centers.col(centers.cols() - 1) = p;
+
+  p << 8.0, 0.0, -1.5;
+  centers.conservativeResize(3, centers.cols() + 1);
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, sc_modulus, true));
+  centers.col(centers.cols() - 1) = p;
+
+  // Wall 1
+  A.resize(1, 3);
+  A << 0.0, 1.0, 0.0;
+  b.resize(1);
+  b << -3.0;
+  p << 0.0, 0.0, 0.0;
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, 0.0, true));
+
+  // Wall 2
+  A.resize(1, 3);
+  A << 0.0, -1.0, 0.0;
+  b.resize(1);
+  b << -3.0;
+  p << 0.0, 0.0, 0.0;
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, 0.0, true));
+
+  // Wall 3
+  A.resize(1, 3);
+  A << 0.0, 0.0, 1.0;
+  b.resize(1);
+  b << -3.0;
+  p << 0.0, 0.0, 0.0;
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, 0.0, true));
+
+  // Wall 4
+  A.resize(1, 3);
+  A << 0.0, 0.0, -1.0;
+  b.resize(1);
+  b << -3.0;
+  p << 0.0, 0.0, 0.0;
+  obs_vec.push_back(
+      std::make_shared<StaticPolytope<3>>(A, b, p, margin, 0.0, true));
 }
 
 void GetRobotSafeRegion(int num_sys,
                         std::vector<std::shared_ptr<ConvexSet>>& safe_vec,
                         double max_vel) {
-  safe_vec.resize(num_sys);
+  safe_vec.resize(0);
 
   // Quadrotor shape set parameters
   const double pow = 2.5;
   Eigen::Vector4d coeff(1.0, 1.0, 0.4, 0.3);  // [m, m, m, ]
-  double margin = 0.05;                       // [m]
+  const double margin_s = 0.05;               // [m]
   // Quadrotor corridor set parameters
   const double stop_time = 1.0;         // [s]
   const double orientation_cost = 0.5;  // [s]
-  margin = 0.0;                         // [m]
+  const double margin_c = 0.05;         // [m]
 
   for (int i = 0; i < num_sys; ++i) {
     const std::shared_ptr<ConvexSet> shape =
-        std::make_shared<QuadrotorShape>(pow, coeff, margin);
+        std::make_shared<QuadrotorShape>(pow, coeff, margin_s);
     const std::shared_ptr<ConvexSet> corridor =
         std::make_shared<QuadrotorCorridor>(stop_time, orientation_cost,
-                                            max_vel, margin);
-    safe_vec[i] = std::make_shared<MinkowskiSumSet>(shape, corridor);
+                                            max_vel, margin_c);
+    safe_vec.push_back(std::make_shared<MinkowskiSumSet>(shape, corridor));
   }
 }
 
 void SetupEnvironment(double dt, Environment& env) {
   // Get obstacles (static polytopes)
   std::vector<std::shared_ptr<ConvexSet>> obs_vec;
-  GetObstacle(obs_vec);
+  MatrixXd centers;
+  GetObstacle(obs_vec, centers);
   int num_obs = static_cast<int>(obs_vec.size());
   VectorXd x = VectorXd::Zero(0);
   for (auto obs : obs_vec) obs->set_states(x, x);
   // Get quadrotor safe regions
-  const int num_sys = 8;
-  const double max_vel = 1.0;  // [m/s]
+  const int num_sys = 1;
+  const double max_vel = 0.5;  // [m/s]
   std::vector<std::shared_ptr<ConvexSet>> safe_vec;
   GetRobotSafeRegion(num_sys, safe_vec, max_vel);
 
@@ -111,8 +187,9 @@ void SetupEnvironment(double dt, Environment& env) {
   MatrixXd metric = MatrixXd::Identity(3, 3);
   auto opt = std::make_shared<SolverOptions>();
   opt->metric = metric;
-  opt->kkt_ode.use_kkt_err_tol = false;
+  opt->kkt_ode.use_kkt_err_tol = true;
   opt->kkt_ode.max_primal_dual_gap = 10e-3;  // [m]
+  opt->kkt_ode.max_inf_kkt_err = 1e-1;
   opt->kkt_ode.timestep = dt;
 
   // Set collision pairs
@@ -131,8 +208,6 @@ void SetupEnvironment(double dt, Environment& env) {
 
   // Set dynamical systems
   const double mass = 0.5;  // [kg].
-  const Eigen::Vector3d inertia_diag(2.32 * 1e-3, 2.32 * 1e-3, 4 * 1e-3);
-  const MatrixXd inertia = inertia_diag.asDiagonal();
   const MatrixXd constr_mat_u = MatrixXd::Zero(0, 4);
   const VectorXd constr_vec_u = VectorXd::Zero(0);
   std::vector<std::shared_ptr<DynamicalSystem>> sys_vec;
@@ -142,13 +217,13 @@ void SetupEnvironment(double dt, Environment& env) {
 
   // Update environment struct
   env.num_obs = num_obs;
+  env.centers = centers;
   env.obs_cps = obs_cps;
   env.num_sys = num_sys;
   env.sys_vec = sys_vec;
   env.sys_cps = sys_cps;
 
   env.mass = mass;
-  env.inertia = inertia;
   env.max_vel = max_vel;
 
   env.opt = opt;
@@ -162,29 +237,30 @@ struct Trajectory {
   Eigen::Vector3d wd;
 };
 
-void GetDesiredTrajectory(double t, int i, const Environment& /*env*/,
+void GetDesiredTrajectory(double t, int i, const Environment& env,
                           Trajectory& trajectory) {
   assert(t >= 0);
   assert((i >= 0) && (i < 16));
 
-  const double side_len = 1.0;    // [m]
-  const double separation = 7.5;  // [m]
+  const double side_len = 1.0;     // [m]
+  const double separation = 12.0;  // [m]
 
   Eigen::Vector3d p;
-  const Eigen::Vector3d v(0.0, 0.0, 0.0);  // [m/s]
+  const Eigen::Vector3d v(0.5, 0.0, 0.0);  // [m/s]
   const Eigen::Vector3d a(0.0, 0.0, 0.0);  // [m/s^2]
   const Eigen::Vector3d w(0.0, 0.0, 0.0);  // [rad/s]
 
   const int b0 = i % 2;        // team index
-  const int b1 = (i / 2) % 2;  // x index
-  const int b2 = (i / 4) % 2;  // y index
+  const int b1 = (i / 4) % 2;  // x index
+  const int b2 = (i / 2) % 2;  // y index
   const int b3 = (i / 8) % 2;  // z index
 
   p(0) = std::pow(-1, b1) * side_len - separation;
-  p(1) = std::pow(-1, b2) * side_len;
-  p(2) = std::pow(-1, b3) * side_len;
+  p(1) = std::pow(-1, b2) * side_len - 1.0;
+  p(2) = std::pow(-1, b3) * side_len - 1.0;
   p(0) = std::pow(-1, b0) * p(0);
-  if (t > 0.05) p(0) = -p(0);
+  if (t > 0.05) p(0) = std::min(separation, env.sys_vec[i]->x()(0) + 2.0);
+  // if (t > 0.05) p = -p;
 
   trajectory.time = t;
   trajectory.pd = p;
@@ -197,7 +273,7 @@ void GetReferenceControl(double t, const Environment& env, VectorXd& u) {
   const int num_sys = env.num_sys;
   assert(u.rows() == 4 * num_sys);
 
-  const double kP = 5.0;
+  const double kP = 10.0;
   const double kD = 5.0;
   const double kR = 6.0;
   const Eigen::Vector3d g(0.0, 0.0, 9.81);  // [m/s^2]
@@ -279,15 +355,17 @@ void Logs::UpdateLogs(int k, const Environment& env, double solve_time_ode,
   this->solve_time_ode(k) = solve_time_ode;
   this->solve_time_qp(k) = solve_time_qp;
 
-  int nz = env.obs_cps[0]->get_set1()->nz() + env.obs_cps[0]->get_set2()->nz();
-  VectorXd z_ode(nz), z_opt(nz), lambda_ode, lambda_opt;
+  VectorXd z_ode, z_opt, lambda_ode, lambda_opt;
   double solve_time = 0.0;
 
   auto kkt_err_function = [this, &env, &kkt_err, &z_ode, &z_opt, &lambda_ode,
                            &lambda_opt,
                            &solve_time](int idx, int k,
                                         std::shared_ptr<CollisionPair> cp) {
+    int nz = cp->get_set1()->nz() + cp->get_set2()->nz();
     int nr = cp->get_set1()->nr() + cp->get_set2()->nr();
+    z_ode.resize(nz);
+    z_opt.resize(nz);
     lambda_ode.resize(nr);
     lambda_opt.resize(nr);
     // Store current KKT solution
@@ -374,7 +452,7 @@ void Logs::SaveLogs(std::ofstream& outfile) {
 int main() {
   // Set time sequences
   const double t_0 = 0.0;  // [s]
-  const double T = 30.0;   // [s]
+  const double T = 100.0;  // [s]
   double dt = 1e-3;
   const int N = static_cast<int>(std::ceil(T / dt));
   const auto t_seq = VectorXd::LinSpaced(N, t_0, T);
@@ -409,6 +487,9 @@ int main() {
 
   // Control loop
   CbfQpController controller(env);
+  VectorXd u_f = VectorXd::Zero(4 * num_sys);
+  for (int i = 0; i < num_sys; ++i) u_f(4 * i) = env.mass * 9.81;
+  const double k_f = 1.0;
 
   auto start = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::high_resolution_clock::now() - start;
@@ -421,26 +502,33 @@ int main() {
     if (i % 5000 == 0) {
       printf("time (s) = %5.2f\n", t_seq(i));
     }
-    if (i % control_freq == 0) {
-      // Get reference input
-      GetReferenceControl(t_seq(i), env, u_ref);
-      // Solve CBF-QP
-      start = std::chrono::high_resolution_clock::now();
-      // controller.Control(env, u_ref, u);
-      u = u_ref;
-      elapsed = std::chrono::high_resolution_clock::now() - start;
-      solve_time_qp =
-          static_cast<double>(
-              std::chrono::duration_cast<std::chrono::microseconds>(elapsed)
-                  .count()) *
-          1e-6;
-    }
+    // if (i % control_freq == 0) {
+    // Get reference input
+    GetReferenceControl(t_seq(i), env, u_ref);
+    // Solve CBF-QP
+    start = std::chrono::high_resolution_clock::now();
+    controller.Control(env, u_ref, u);
+    // u = u_ref;
+    elapsed = std::chrono::high_resolution_clock::now() - start;
+    solve_time_qp =
+        static_cast<double>(
+            std::chrono::duration_cast<std::chrono::microseconds>(elapsed)
+                .count()) *
+        1e-6;
+    // }
+    // Filter inputs
+    u_f = k_f * u + (1 - k_f) * u_f;
+    for (int j = 0; j < num_sys; ++j) u_f(4 * j) = u(4 * j);
     // Update KKT solutions
-    env.set_inputs(u);
+    env.set_inputs(u_f);
     start = std::chrono::high_resolution_clock::now();
     int idx = 0;
-    for (int k = 0; k < num_obs_cps; ++k, ++idx)
+    for (int k = 0; k < num_obs_cps; ++k, ++idx) {
+      // const auto p = env.obs_cps[k]->get_set1()->x().head<3>();
+      // if ((k < env.centers.cols()) && (p - env.centers.col(k)).norm() > 5.0)
+      //   continue;
       kkt_err(idx) = env.obs_cps[k]->KktStep();
+    }
     for (int k = 0; k < num_sys_cps; ++k, ++idx)
       kkt_err(idx) = env.sys_cps[k]->KktStep();
     elapsed = std::chrono::high_resolution_clock::now() - start;
@@ -455,7 +543,7 @@ int main() {
       ++j;
     }
     // Integrate state
-    env.UpdateSystemState(u, dt);
+    env.UpdateSystemState(u_f, dt);
   }
   printf("Control loop finished.\n");
 
