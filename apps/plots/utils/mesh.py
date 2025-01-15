@@ -105,6 +105,76 @@ def vertex_face_from_halfspace_rep(
     return (vertices, faces)
 
 
+def random_polytope_vrep(num_pts: int, side_len: float, min_dist: float) -> None:
+    assert num_pts >= 4
+    vertices = side_len * np.random.random((1, 3))
+    i = 0
+    while True:
+        pt = side_len * np.random.random((3,))
+        if np.any(np.linalg.norm(vertices - pt, axis=1) < min_dist):
+            continue
+        vertices = np.append(vertices, [pt], axis=0)
+        i = i + 1
+        if i >= num_pts:
+            break
+    hull = ConvexHull(vertices)
+    print(f"Volume: {hull.volume} / {side_len ** 3}")
+    print(hull.equations)
+
+    vis = meshcat.Visualizer()
+    vis.open()
+
+    material = gm.MeshLambertMaterial(
+        color=0xFFFFFF, wireframe=False, opacity=1.0, reflectivity=0.5
+    )
+    f = wavefront_virtual_file(vertices, hull.simplices)
+    mesh = gm.ObjMeshGeometry.from_stream(f)
+    vis.set_object(mesh, material)
+
+
+def random_polytope_hrep(num_constrs: int, side_len: float, in_radius: float) -> None:
+    A = np.empty((6, 3))
+    A[:3, :] = np.identity(3)
+    A[3:, :] = -np.identity(3)
+    b = side_len / 2.0 * np.ones((6,))
+    i = 0
+    while True:
+        ai = 2.0 * (np.random.random((3,)) - 0.5)
+        norm = np.linalg.norm(ai)
+        if norm == 0:
+            continue
+        ai = ai / norm
+        bi = np.max([np.random.random(), in_radius])
+        if i >= num_constrs:
+            break
+        A = np.append(A, [ai], axis=0)
+        b = np.append(b, bi)
+        i = i + 1
+
+    p = pc.Polytope(A, b)
+    p = pc.reduce(p)
+    vertices = pc.extreme(p)
+    min_dist = np.inf
+    for i in range(vertices.shape[0]):
+        for j in range(i + 1, vertices.shape[0]):
+            vi, vj = vertices[i], vertices[j]
+            min_dist = np.min([min_dist, np.linalg.norm(vi - vj)])
+    print(f"Minimum distance between vertices: {min_dist}\n")
+    hull = ConvexHull(vertices)
+    print(A)
+    print(b)
+
+    vis = meshcat.Visualizer()
+    vis.open()
+
+    material = gm.MeshLambertMaterial(
+        color=0xFFFFFF, wireframe=False, opacity=1.0, reflectivity=0.5
+    )
+    f = wavefront_virtual_file(vertices, hull.simplices)
+    mesh = gm.ObjMeshGeometry.from_stream(f)
+    vis.set_object(mesh, material)
+
+
 def qshape_implicit_function(Z: List[np.ndarray]) -> np.ndarray:
     _pow = 2.5
     _coeff = [1.0, 1.0, 0.4, 0.3]
@@ -320,5 +390,8 @@ def _visualize_sets() -> None:
 
 
 if __name__ == "__main__":
+    # random_polytope_vrep(10, 1.5, 0.25)
+    # random_polytope_hrep(6, 1.5, 0.5)
+
     _visualize_sets()
     _dodecahedron_vertices()

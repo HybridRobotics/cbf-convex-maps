@@ -168,7 +168,7 @@ def _plot_data(log: dict):
     )
     ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     ax.margins(axis_margins, axis_margins)
-    ax.set_ylim([5e-5, 2e-3])
+    # ax.set_ylim([5e-5, 2e-3])
 
     plt.show()
 
@@ -206,7 +206,7 @@ def _plot_data(log: dict):
     ax.tick_params(axis="both", which="major", labelsize=font_size)
     ax.ticklabel_format(axis="y", style="sci", scilimits=(1e-2, 0.0))
     ax.margins(axis_margins, axis_margins)
-    ax.set_ylim([0, 1e-4])
+    # ax.set_ylim([0, 1e-4])
 
     plt.show()
 
