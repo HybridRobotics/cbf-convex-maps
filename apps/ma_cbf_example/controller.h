@@ -23,6 +23,8 @@ using namespace sccbf;
 namespace {
 
 const double kPi = static_cast<double>(EIGEN_PI);
+const double kInf = std::numeric_limits<double>::infinity();
+const double kGravity = 9.81;  // [m/s^2]
 
 struct Environment {
   // Quadrotor-obstacle collision pairs
@@ -33,7 +35,6 @@ struct Environment {
   std::vector<std::shared_ptr<DynamicalSystem>> sys_vec;
   std::vector<std::shared_ptr<CollisionPair>> sys_cps;
   double mass;
-  MatrixXd inertia;
   double max_vel;
   // Solver options
   std::shared_ptr<SolverOptions> opt;
@@ -51,12 +52,26 @@ inline void Environment::set_inputs(const VectorXd& u) {
 
   VectorXd f(15);
   MatrixXd g(15, 4);
-  for (int i = 0; i < num_sys; ++i) {
-    const auto xi = sys_vec[i]->x();
-    const auto ui = u.segment<4>(4 * i);
-    sys_vec[i]->Dynamics(f, g);
-    const auto dxi = f + g * ui;
-    obs_cps[num_obs * i]->get_set1()->set_states(xi, dxi);
+  if (num_obs > 0) {
+    for (int i = 0; i < num_sys; ++i) {
+      const auto xi = sys_vec[i]->x();
+      const auto ui = u.segment<4>(4 * i);
+      sys_vec[i]->Dynamics(f, g);
+      const auto dxi = f + g * ui;
+      obs_cps[num_obs * i]->get_set1()->set_states(xi, dxi);
+    }
+  }
+  if (num_sys > 1) {
+    for (int i = 0; i < num_sys; ++i) {
+      const auto xi = sys_vec[i]->x();
+      const auto ui = u.segment<4>(4 * i);
+      sys_vec[i]->Dynamics(f, g);
+      const auto dxi = f + g * ui;
+      if (i == 0)
+        sys_cps[0]->get_set1()->set_states(xi, dxi);
+      else
+        sys_cps[i - 1]->get_set2()->set_states(xi, dxi);
+    }
   }
 }
 
@@ -97,13 +112,13 @@ class CbfQpController {
   static constexpr double kMaxOmega = 3.14;    // [rad/s]
 
   static constexpr double kOmega = 0.0;
-  static constexpr double kPrev = 0.0;
   static constexpr double kT = 0.0;
-  static constexpr double kRef = 1.0;
+  static constexpr double kRefT = 1.0;
+  static constexpr double kRefOmega = 0.1;
 
   static constexpr double kAlphaVelCbf = 1.0;
   static constexpr double kAlphaAngCbf = 1.0;
-  static constexpr double kAlphaDistCbf = 1.0;
+  static constexpr double kAlphaDistCbf = 0.5;
 
   VectorXd margin2_;
   double mass_;
@@ -126,8 +141,6 @@ class CbfQpController {
 
 inline CbfQpController::CbfQpController(const Environment& env) {
   // Set constants
-  const double kGravity = 9.81;  // [m/s^2]
-  const double kInf = std::numeric_limits<double>::infinity();
   mass_ = env.mass;
   max_vel_ = env.max_vel;
   cos_max_ang_ = std::cos(kMaxQuadAng / 180.0 * kPi);
@@ -146,9 +159,9 @@ inline CbfQpController::CbfQpController(const Environment& env) {
   // Resize and set Hessian matrix
   hessian_.resize(4 * num_sys_, 4 * num_sys_);
   for (int i = 0; i < num_sys_; ++i) {
-    hessian_.insert(4 * i, 4 * i) = kT + kRef;
+    hessian_.insert(4 * i, 4 * i) = kT + kRefT;
     for (int j = 1; j < 4; ++j)
-      hessian_.insert(4 * i + j, 4 * i + j) = kOmega + kPrev + kRef;
+      hessian_.insert(4 * i + j, 4 * i + j) = kOmega + kRefOmega;
   }
 
   // Resize gradient, constraint ub and lb, and constraint matrix
@@ -161,19 +174,17 @@ inline CbfQpController::CbfQpController(const Environment& env) {
   // Set fixed constraints
   //  CBF constraint matrix and lb, ub values
   //    Quadrotor-obstacle collision pairs
+  int idx = 0;
   for (int i = 0; i < num_sys_; ++i)
-    for (int j = 0; j < num_obs_; ++j)
-      for (int k = 4 * i; k < 4 * i + 4; ++k)
-        constraint_mat_.insert(num_obs_ * i + j, k) = 1.0;
+    for (int j = 0; j < num_obs_; ++j, ++idx)
+      for (int k = 0; k < 4; ++k) constraint_mat_.insert(idx, 4 * i + k) = 1.0;
   //    Inter-quadrotor collision pairs
-  int idx = num_obs_cps_;
   for (int i = 0; i < num_sys_; ++i) {
-    for (int j = i + 1; j < num_sys_; ++j) {
+    for (int j = i + 1; j < num_sys_; ++j, ++idx) {
       for (int k = 0; k < 4; ++k) {
         constraint_mat_.insert(idx, 4 * i + k) = 1.0;
         constraint_mat_.insert(idx, 4 * j + k) = 1.0;
       }
-      ++idx;
     }
   }
   //    Velocity, quadrotor-angle bounds
@@ -188,11 +199,11 @@ inline CbfQpController::CbfQpController(const Environment& env) {
   constraint_lb_.head(num_cps_ + 2 * num_sys_) =
       -kInf * VectorXd::Ones(num_cps_ + 2 * num_sys_);
   //  Input constraints (fixed)
-  //    Thrus, angular velocity constraints
+  //    Thrust, angular velocity constraints
   idx = num_cps_ + 2 * num_sys_;
   for (int i = 0; i < num_sys_; ++i) {
     constraint_mat_.insert(idx + 4 * i, 4 * i) = 1.0;
-    constraint_lb_(idx + 4 * i) = mass_ * kGravity / 10.0;
+    constraint_lb_(idx + 4 * i) = 0.0;
     constraint_ub_(idx + 4 * i) = 2.0 * mass_ * kGravity;
     for (int j = 1; j < 4; ++j) {
       constraint_mat_.insert(idx + 4 * i + j, 4 * i + j) = 1.0;
@@ -200,13 +211,6 @@ inline CbfQpController::CbfQpController(const Environment& env) {
       constraint_ub_(idx + 4 * i + j) = kMaxOmega;
     }
   }
-
-  // std::cout << hessian_ << std::endl;
-  // std::cout << gradient_ << std::endl;
-  // std::cout << constraint_mat_ << std::endl;
-  // std::cout << constraint_lb_ << std::endl;
-  // std::cout << constraint_ub_ << std::endl;
-  // exit(0);
 
   // instantiate the solver
   solver_.settings()->setVerbosity(false);
@@ -231,9 +235,8 @@ inline void CbfQpController::Control(const Environment& env,
                                      const VectorXd& u_ref, VectorXd& u) {
   assert((u_ref.rows() == 4 * num_sys_) && (u.rows() == 4 * num_sys_));
 
-  const double kInf = std::numeric_limits<double>::infinity();
   VectorXd kGravityVec(3);
-  kGravityVec << 0.0, 0.0, 9.81;
+  kGravityVec << 0.0, 0.0, kGravity;
   VectorXd e3 = VectorXd::Zero(3);
   e3(2) = 1.0;
   MatrixXd e3_hat = MatrixXd::Zero(3, 3);
@@ -242,9 +245,8 @@ inline void CbfQpController::Control(const Environment& env,
   // Cost gradient
   for (int i = 0; i < num_sys_; ++i) {
     const auto u_refi = u_ref.segment<4>(4 * i);
-    const auto wi = VectorXd::Zero(3);
-    gradient_(4 * i) = -(kT * mass_ * kGravityVec(2) + kRef * u_refi(0));
-    gradient_.segment<3>(4 * i + 1) = -(kPrev * wi + kRef * u_refi.tail<3>());
+    gradient_(4 * i) = -(kT * mass_ * kGravity + kRefT * u_refi(0));
+    gradient_.segment<3>(4 * i + 1) = -kRefOmega * u_refi.tail<3>();
   }
 
   // Strongly convex map CBF constraints
@@ -268,6 +270,7 @@ inline void CbfQpController::Control(const Environment& env,
       for (int k = 0; k < 4; ++k)
         constraint_mat_.coeffRef(idx, 4 * i + k) = L_fg_sys1(0, k + 1);
       constraint_lb_(idx) = dist_cbf_lb;
+      // constraint_lb_(idx) = -kInf;
     }
   }
   //  Inter-quadrotor collision pairs
@@ -306,6 +309,7 @@ inline void CbfQpController::Control(const Environment& env,
     for (int j = 0; j < 4; ++j)
       constraint_mat_.coeffRef(idx, 4 * i + j) = vel_cbf_mat(j);
     constraint_lb_(idx) = vel_cbf_lb;
+    // constraint_lb_(idx) = -kInf;
   }
 
   // Quadrotor angle bound CBF constraint
@@ -319,7 +323,12 @@ inline void CbfQpController::Control(const Environment& env,
     for (int j = 0; j < 4; ++j)
       constraint_mat_.coeffRef(idx, 4 * i + j) = ang_cbf_mat(j);
     constraint_lb_(idx) = ang_cbf_lb;
+    // constraint_lb_(idx) = -kInf;
   }
+
+  // std::cout << constraint_lb_ << std::endl;
+  // std::cout << constraint_mat_ << std::endl;
+  // std::cout << constraint_ub_ << std::endl;
 
   // Update QP
   solver_.updateGradient(gradient_);
@@ -332,12 +341,25 @@ inline void CbfQpController::Control(const Environment& env,
     const VectorXd solution = solver_.getSolution();
     u = solution;
   } else {
-    u = u_ref;
+    const double kD = 5.0;
+    const double kR = 6.0;
+    const double max_acc = 3.0 / 4.0 * kGravity;
+    VectorXd a_ref(3);
+    MatrixXd Rd(3, 3);
+    for (int i = 0; i < num_sys_; ++i) {
+      const auto vi = env.sys_vec[i]->x().segment<3>(3);
+      const auto Ri = env.sys_vec[i]->x().tail<9>().reshaped(3, 3);
+      a_ref = -kD * vi;
+      const double normi = a_ref.norm();
+      if (normi > max_acc) a_ref = a_ref / normi * max_acc;
+      RotationFromZVector(a_ref + kGravityVec, Rd);
+      // Thrust input
+      u(4 * i) = env.mass * Ri.col(2).dot(a_ref + kGravityVec);
+      // Angular velocity input
+      u.segment<3>(4 * i + 1) =
+          So3PTrackingControl(Ri, Rd, VectorXd::Zero(3), {kR, 0.0});
+    }
   }
-}
-
-inline void CbfQpController::get_margin2(VectorXd& margin2) {
-  margin2 = margin2_;
 }
 
 }  // namespace
