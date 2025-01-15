@@ -6,6 +6,7 @@
 
 #include "sccbf/data_types.h"
 #include "sccbf/utils/matrix_utils.h"
+#include "sccbf/utils/numerical_derivatives.h"
 
 namespace {
 
@@ -74,9 +75,7 @@ TEST(MatrixFunctionTest, EulerToRotation) {
 TEST(MatrixFunctionTest, RotationFromZVector) {
   // Generate random z-vector.
   VectorXd z = VectorXd::Random(3);
-  z(0) = 2.0 * (z(0) - 0.5);
-  z(1) = 2.0 * (z(1) - 0.5);
-  z(2) = std::max(z(2), 1e-3);
+  z(2) = std::max(z(2) + 1.0, 1e-3);
 
   MatrixXd rot(3, 3);
   RotationFromZVector(z, rot);
@@ -85,6 +84,36 @@ TEST(MatrixFunctionTest, RotationFromZVector) {
   EXPECT_TRUE(rot.isUnitary());
   EXPECT_NEAR(rot.determinant(), 1, 1e-6);
   EXPECT_NEAR((z - rot.col(2)).norm(), 0.0, 1e-6);
+}
+
+TEST(MatrixFunctionTest, AngVelFromZdot) {
+  // Generate random z-vector and derivative.
+  VectorXd z = VectorXd::Random(3);
+  z(2) = std::max(z(2) + 1.0, 1e-3);
+  VectorXd dz = VectorXd::Random(3);
+
+  MatrixXd rot(3, 3);
+  VectorXd wg(3);
+  AngVelFromZdot(z, dz, rot, wg);
+
+  MatrixXd wg_hat = MatrixXd::Zero(3, 3);
+  HatMap<3>(wg, wg_hat);
+  MatrixXd drot = wg_hat * rot;
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      const auto func = [i, j](const VectorXd& z) {
+        MatrixXd rot(3, 3);
+        RotationFromZVector(z, rot);
+        return rot(i, j);
+      };
+      VectorXd grad(3);
+      NumericalGradient(func, z, grad);
+
+      EXPECT_NEAR(grad.dot(z), 0.0, 1e-4);
+      EXPECT_NEAR(drot(i, j), grad.dot(dz), 1e-4)
+          << "Incorrect rotation derivative at (" << i << ", " << j << ")";
+    }
+  }
 }
 
 TEST(MatrixFunctionTest, RandomRotation2d) {

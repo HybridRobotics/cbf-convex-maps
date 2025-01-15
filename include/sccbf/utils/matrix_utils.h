@@ -76,6 +76,19 @@ inline void RotationFromZVector(const VectorXd& z, MatrixXd& rot) {
   rot.col(2) = zn;
 }
 
+inline void AngVelFromZdot(const VectorXd& z, const VectorXd& dz, MatrixXd& rot,
+                           VectorXd& wg) {
+  assert(dz.rows() == 3);
+  assert(wg.rows() == 3);
+
+  RotationFromZVector(z, rot);
+  const auto dzn = (dz - z * z.dot(dz) / z.dot(z)) / z.norm();
+  const double dphi = -dzn.dot(rot.col(1));
+  const double dtheta = dzn.dot(rot.col(0)) / rot(1, 1);
+  wg = rot.col(0) * dphi;
+  wg(1) = wg(1) + dtheta;
+}
+
 template <int dim>
 inline void RandomRotation(MatrixXd& rotation) {
   static_assert((dim == 2) || (dim == 3));
