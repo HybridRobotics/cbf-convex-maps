@@ -121,7 +121,7 @@ def _plot_data(log: dict):
     Ddist_err = Ddist_opt - Ddist_ode
 
     ## Plot 1: KKT error.
-    sp = 21
+    sp = 20
     fig, ax = plt.subplots(
         1,
         1,
@@ -168,7 +168,7 @@ def _plot_data(log: dict):
     )
     ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     ax.margins(axis_margins, axis_margins)
-    # ax.set_ylim([5e-5, 2e-3])
+    ax.set_ylim([5e-5, 2e-3])
 
     plt.show()
 
@@ -216,7 +216,7 @@ def _plot_data(log: dict):
         )  # , bbox_inches='tight')
 
     ## Plot 3: Minimum distance Derivative error.
-    sp = 23
+    sp = 20
     fig, ax = plt.subplots(
         1,
         1,

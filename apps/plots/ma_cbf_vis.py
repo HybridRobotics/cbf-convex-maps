@@ -30,11 +30,11 @@ _QUADROTOR_DOWNWASH_MESH = mesh_from_implicit_function(
 _OBSTACLE_MATERIAL = gm.MeshLambertMaterial(
     color=0xFFFFFF, wireframe=False, opacity=0.75, reflectivity=0.5
 )
-_QUADROTOR_MATERIAL_A = gm.MeshLambertMaterial(
-    color=0x00FF00, wireframe=False, opacity=1, reflectivity=0.5
+_QUADROTOR_MATERIAL = gm.MeshLambertMaterial(
+    color=0xAAAAAA, wireframe=False, opacity=1, reflectivity=0.5
 )
-_QUADROTOR_MATERIAL_B = gm.MeshLambertMaterial(
-    color=0xFF0000, wireframe=False, opacity=1, reflectivity=0.5
+_QUADROTOR_MATERIAL_VIS = gm.MeshLambertMaterial(
+    color=0x00FF00, wireframe=False, opacity=1, reflectivity=0.5
 )
 _MESH_MATERIAL = gm.MeshBasicMaterial(
     color=0xFF22DD, wireframe=True, linewidth=1, opacity=1
@@ -50,12 +50,12 @@ def _safe_region_snapshot(vis: Visualizer) -> None:
     vis["/Background"].set_property("bottom_color", [1.0, 1.0, 1.0])
 
     T = tf.rotation_matrix(np.pi / 4.0, [0, 1, 0])
-    vis["quad"].set_object(_QUADROTOR_OBJ, _QUADROTOR_MATERIAL_B)
+    vis["quad"].set_object(_QUADROTOR_OBJ, _QUADROTOR_MATERIAL)
     vis["quad"].set_transform(T)
     x = np.hstack([np.zeros((6,)), np.identity(3).reshape((-1,))])
     x[3] = 1.0
 
-    vd, fd = _QUADROTOR_DOWNWASH_MESH
+    vs, fs = _QUADROTOR_SHAPE_MESH
     vc, fc = mesh_from_implicit_function(
         lambda Z: qcorridor_implicit_function(Z, x),
         dz=0.1,
@@ -64,16 +64,16 @@ def _safe_region_snapshot(vis: Visualizer) -> None:
     set = 1
 
     if set == 1:
-        # Downwash set.
-        downwash_mesh = gm.TriangularMeshGeometry(vd, fd)
-        vis["downwash"].set_object(downwash_mesh, _MESH_MATERIAL)
-        vis["downwash"].set_transform(T)
+        # Shape set.
+        shape_mesh = gm.TriangularMeshGeometry(vs, fs)
+        vis["shape"].set_object(shape_mesh, _MESH_MATERIAL)
+        vis["shape"].set_transform(T)
         # Corridor set.
         corridor_mesh = gm.TriangularMeshGeometry(vc, fc)
         vis["corridor"].set_object(corridor_mesh, _MESH_MATERIAL)
     elif set == 2:
-        vd = vd @ T[:3, :3].T
-        v, f = minkowski_sum_mesh_from_vertices(vd, vc)
+        vs = vs @ T[:3, :3].T
+        v, f = minkowski_sum_mesh_from_vertices(vs, vc)
         safe_mesh = gm.TriangularMeshGeometry(v, f)
         vis["safe"].set_object(safe_mesh, _MESH_MATERIAL)
 
@@ -151,30 +151,42 @@ def _add_obstacle(vis: Visualizer, log: dict) -> None:
         vis["obstacle-" + str(i)].set_object(mesh, _OBSTACLE_MATERIAL)
 
     # Walls
-    A = np.vstack([np.identity(3), -np.identity(3)])
-    b = np.array([10.0, 3.0, 3.0] * 2)
-    vertices, faces = vertex_face_from_halfspace_rep(A, b)
-    f = wavefront_virtual_file(vertices, faces)
-    mesh = gm.ObjMeshGeometry.from_stream(f)
-    vis["wall"].set_object(mesh, _MESH_MATERIAL)
+    l = 12.0  # [m]
+    w = 3.0  # [m]
+    h = 3.0  # [m]
+    vertices = np.array(
+        [
+            [l, w, h],
+            [-l, w, h],
+            [-l, -w, h],
+            [l, -w, h],
+            [l, w, h],
+            [l, w, -h],
+            [-l, w, -h],
+            [-l, -w, -h],
+            [l, -w, -h],
+            [l, w, -h],
+            [-l, w, -h],
+            [-l, w, h],
+            [-l, -w, h],
+            [-l, -w, -h],
+            [l, -w, -h],
+            [l, -w, h],
+        ]
+    ).T
+    wall = gm.Line(
+        gm.PointsGeometry(vertices),
+        gm.MeshBasicMaterial(color=0xFF22DD, transparency=False, opacity=1),
+    )
+    vis["wall"].set_object(wall)
 
 
-def _add_quadrotor(vis: Visualizer, x: np.ndarray, name: str, team: int) -> None:
-    if team == 0:
-        material = _QUADROTOR_MATERIAL_A
-    elif team == 1:
-        material = _QUADROTOR_MATERIAL_B
-    else:
-        RuntimeError("Team show be 0 or 1!")
-    vis[name]["quad"].set_object(_QUADROTOR_OBJ, material)
-    v, f = _QUADROTOR_SHAPE_MESH
-    mesh = gm.TriangularMeshGeometry(v, f)
-    vis[name]["shape"].set_object(mesh, _MESH_MATERIAL)
-
+def _add_quadrotor(vis: Visualizer, x: np.ndarray, name: str) -> None:
     p = x[:3]
     R = x[-9:].reshape((3, 3))
     T = tf.translation_matrix(p)
     T[:3, :3] = R
+    vis[name]["quad"].set_object(_QUADROTOR_OBJ, _QUADROTOR_MATERIAL_VIS)
     vis[name].set_transform(T)
 
 
@@ -189,21 +201,21 @@ def _snapshot(log: dict, vis: Visualizer, timestamps: np.ndarray) -> None:
         xi = x[15 * i : 15 * (i + 1), :]
 
         # Create a 3D line plot
-        # Nf = max(0, min(Nlog - 1, int(timestamps[-1] * Nlog)))
-        # vertices = x[:3, :Nf:10]
+        Tf = 80  # [s]
+        Nf = int(Tf / 100.0 * len(log["t_seq"]) - 1)
         sp = 10
-        vertices = xi[:3, ::sp]
+        vertices = xi[:3, :Nf:sp]
         trajectory = gm.Line(
             gm.PointsGeometry(vertices),
-            gm.MeshBasicMaterial(color=0xFF0000, transparency=False, opacity=1),
+            gm.MeshBasicMaterial(color=0x0000FF, transparency=False, opacity=1),
         )
         vis["trajectory-" + str(i)].set_object(trajectory)
 
         for j, f in enumerate(timestamps):
             idx = max(0, min(Nlog - 1, int(f * Nlog)))
-            xit = x[:, idx]
+            xif = x[:, idx]
             name = "robot-" + str(i) + "-" + str(j)
-            _add_quadrotor(vis, xit, name, i % 2)
+            _add_quadrotor(vis, xif, name)
 
 
 if __name__ == "__main__":
@@ -218,6 +230,6 @@ if __name__ == "__main__":
     vis.open()
 
     # Snapshots.
-    timestamps = np.array([0.0, 0.05, 0.15, 0.25, 0.35, 0.5, 0.7, 1.0])
+    timestamps = np.arange(0.0, 1.0, 0.05)
     _snapshot(log, vis, timestamps)
     # _safe_region_snapshot(vis)
