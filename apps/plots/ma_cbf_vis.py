@@ -53,7 +53,7 @@ def _safe_region_snapshot(vis: Visualizer) -> None:
     vis["quad"].set_object(_QUADROTOR_OBJ, _QUADROTOR_MATERIAL)
     vis["quad"].set_transform(T)
     x = np.hstack([np.zeros((6,)), np.identity(3).reshape((-1,))])
-    x[3] = 1.0
+    x[3] = 0.5
 
     vs, fs = _QUADROTOR_SHAPE_MESH
     vc, fc = mesh_from_implicit_function(
@@ -61,7 +61,7 @@ def _safe_region_snapshot(vis: Visualizer) -> None:
         dz=0.1,
         z_lim=[[-2.0, 2.0], [-1.5, 1.5], [-1.5, 1.5]],
     )
-    set = 1
+    set = 2
 
     if set == 1:
         # Shape set.
@@ -231,5 +231,5 @@ if __name__ == "__main__":
 
     # Snapshots.
     timestamps = np.arange(0.0, 1.0, 0.05)
-    _snapshot(log, vis, timestamps)
-    # _safe_region_snapshot(vis)
+    # _snapshot(log, vis, timestamps)
+    _safe_region_snapshot(vis)

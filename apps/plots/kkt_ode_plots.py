@@ -14,17 +14,17 @@ _DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 def _print_statistics(log: dict) -> None:
     # Solution times.
     avg_solve_time_opt = np.mean(log["solve_time_opt"]) * 1e3
-    print(f"Solution time (opt) (ms): avg {avg_solve_time_opt:7.3f}")
+    print(f"Solution time (opt) (ms): avg {avg_solve_time_opt:8.4f}")
     avg_solve_time_ode = np.mean(log["solve_time_ode"]) * 1e3
     std_solve_time_ode = np.std(log["solve_time_ode"]) * 1e3
     p50_solve_time_ode = np.percentile(log["solve_time_ode"], 50) * 1e3
     p90_solve_time_ode = np.percentile(log["solve_time_ode"], 90) * 1e3
     p99_solve_time_ode = np.percentile(log["solve_time_ode"], 99) * 1e3
-    print(f"Solution time (ode) (ms): avg {avg_solve_time_ode:7.3f}, ", end="")
-    print(f"std {std_solve_time_ode:7.3f}, ", end="")
-    print(f"p50 {p50_solve_time_ode:7.3f}, ", end="")
-    print(f"p90 {p90_solve_time_ode:7.3f}, ", end="")
-    print(f"p99 {p99_solve_time_ode:7.3f}")
+    print(f"Solution time (ode) (ms): avg {avg_solve_time_ode:8.5f}, ", end="")
+    print(f"std {std_solve_time_ode:8.5f}, ", end="")
+    print(f"p50 {p50_solve_time_ode:8.5f}, ", end="")
+    print(f"p90 {p90_solve_time_ode:8.5f}, ", end="")
+    print(f"p99 {p99_solve_time_ode:8.5f}")
 
     # Minimum distance error.
     dist_opt = np.sqrt(log["dist2_opt"])
@@ -32,8 +32,8 @@ def _print_statistics(log: dict) -> None:
     dist_err = np.abs(dist_opt - dist_ode)
     dist_err_max = np.max(dist_err)
     dist_err_rel = np.max(dist_err / dist_opt)
-    print(f"Distance error (max) (m)     : {dist_err_max:6.3f}")
-    print(f"Distance relative error (max): {dist_err_rel:6.3f}")
+    print(f"Distance error (max) (m)     : {dist_err_max:8.5f}")
+    print(f"Distance relative error (max): {dist_err_rel:8.5f}")
 
     # Minimum distance derivative.
     Ddist2_opt = np.gradient(log["dist2_opt"], log["t_seq"])
@@ -42,18 +42,18 @@ def _print_statistics(log: dict) -> None:
     Ddist_err = np.abs(Ddist2_opt / (2 * dist_opt) - Ddist_ode)
     avg_Ddist_err, std_Ddist_err = np.mean(Ddist_err), np.std(Ddist_err)
     p50_Ddist_err, p90_Ddist_err, p99_Ddist_err = np.percentile(Ddist_err, [50, 90, 99])
-    print(f"Distance derivative error (m/s)      : Avg {avg_Ddist_err:7.3f}, ", end="")
-    print(f"std {std_Ddist_err:7.3f}, ", end="")
-    print(f"p50 {p50_Ddist_err:7.3f}, ", end="")
-    print(f"p90 {p90_Ddist_err:7.3f}, ", end="")
-    print(f"p99 {p99_Ddist_err:7.3f}")
+    print(f"Distance derivative error (m/s)      : Avg {avg_Ddist_err:8.5f}, ", end="")
+    print(f"std {std_Ddist_err:8.5f}, ", end="")
+    print(f"p50 {p50_Ddist_err:8.5f}, ", end="")
+    print(f"p90 {p90_Ddist_err:8.5f}, ", end="")
+    print(f"p99 {p99_Ddist_err:8.5f}")
     print(f"Distance derivative (max) (ode) (m/s): {Ddist_ode_max:7.3f}")
 
     # Primal and dual solution errors.
     z_rel_err_max = np.max(log["z_err_norm"] / log["z_opt_norm"])
-    print(f"Primal solution relative error (max): {z_rel_err_max:6.3f}")
+    print(f"Primal solution relative error (max): {z_rel_err_max:8.5f}")
     lambda_rel_err_max = np.max(log["lambda_err_norm"] / log["lambda_opt_norm"])
-    print(f"Dual solution relative error (max)  : {lambda_rel_err_max:6.3f}")
+    print(f"Dual solution relative error (max)  : {lambda_rel_err_max:8.5f}")
 
     # KKT errors.
     dual_inf_err_max = np.max(log["dual_inf_err_norm"])
