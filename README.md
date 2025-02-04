@@ -85,15 +85,19 @@ The examples in `apps/` consider two scenarios for a quadrotor system (see the p
 The second example considers a scenario where the safe region of the quadrotor is given by the Minkowski sum of the quadrotor shape and a dynamic safety corridor depending on quadrotor orientation and velocity (see the figure below).
 The dynamic safe region of the quadrotor (a Minkowski sum of strongly convex maps) can be represented as the projection of a strongly convex map in R6 onto R3.
 
-img1
+<p align="center">
+<img src="docs/figures/quadrotor_corridor_safe_set.png" width=90% height=90%>
+</p>
 
 The following example shows our method for a quadrotor control task, where the quadrotor needs to safely navigate through an obstacle-filled corridor.
 CBF constraints are enforced between the 11 polyhedral obstacles and the dynamic safe region of the quadrotor.
 Our method enables fast computation of the minimum distance function and the minimum distance Lie derivatives using the KKT solutions.
 
-img2
+<p align="center">
+<img src="docs/figures/cbf_snapshot.png" width=90% height=90%>
 
-img3
+<img src="docs/figures/cbf_dist.png" width=45% height=45%>
+</p>
 
 For the quadrotor collision avoidance example, the CBF-QP solution computation and all 11 KKT solution updates can be performed reliably at 500 Hz.
 In particular, the KKT solution updates are generally performed within 10 microseconds (for each collision pair), which can be more than an order of magnitude faster than solving for the KKT solutions directly (even with warm start).
