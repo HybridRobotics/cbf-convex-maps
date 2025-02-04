@@ -20,7 +20,7 @@ An arXiv version of the paper will be uploaded soon.
 
 ### Requirements
 
-The following C++ libraries are required:
+The following C++ (>= 17) libraries are required:
 - `Eigen` (>= 3.4.90; install from the [source](https://eigen.tuxfamily.org/index.php?title=Main_Page))
 - `Ipopt` (install from [source](https://coin-or.github.io/Ipopt/INSTALL.html))
 - `OSQP` (install from [source](https://osqp.org/docs/get_started/sources.html))
@@ -80,6 +80,20 @@ Code formatting is done via `pre-commit` hooks.
 
 ### Examples
 
-The examples in `apps/` consider two scenarios for a quadrotor system (see the paper for a complete description).
+The examples in `apps/` consider two scenarios for a quadrotor system (see the paper for complete problem description and results).
 
+The second example considers a scenario where the safe region of the quadrotor is given by the Minkowski sum of the quadrotor shape and a dynamic safety corridor depending on quadrotor orientation and velocity (see the figure below).
+The dynamic safe region of the quadrotor (a Minkowski sum of strongly convex maps) can be represented as the projection of a strongly convex map in R6 onto R3.
 
+img1
+
+The following example shows our method for a quadrotor control task, where the quadrotor needs to safely navigate through an obstacle-filled corridor.
+CBF constraints are enforced between the 11 polyhedral obstacles and the dynamic safe region of the quadrotor.
+Our method enables fast computation of the minimum distance function and the minimum distance Lie derivatives using the KKT solutions.
+
+img2
+
+img3
+
+For the quadrotor collision avoidance example, the CBF-QP solution computation and all 11 KKT solution updates can be performed reliably at 500 Hz.
+In particular, the KKT solution updates are generally performed within 10 microseconds (for each collision pair), which can be more than an order of magnitude faster than solving for the KKT solutions directly (even with warm start).
