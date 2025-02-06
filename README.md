@@ -14,7 +14,7 @@ The core algorithm is implemented in the [CollisionPair class](https://github.co
 ### Citing
 The technical paper corresponding to this repository is in review (second round in SICON24).
 
-An arXiv version of the paper will be uploaded soon.
+- Akshay Thirugnanam, Jun Zeng, Koushil Sreenath. "Control Barrier Functions for Collision Avoidance Between Strongly Convex Regions." [[arXiv]](https://arxiv.org/abs/2306.13259)
 
 ---
 
